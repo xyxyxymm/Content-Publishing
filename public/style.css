@@ -202,6 +202,8 @@ body {
   min-height: 360px;
   resize: vertical;
   tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 #content:focus {
@@ -647,27 +649,25 @@ body {
 
 /* ============= WeChat Config ============= */
 .wechat-config {
-  padding: 12px 20px;
-  background: #f0f8e8;
-  border-top: 1px solid #c8e6c9;
+  padding: 10px 20px;
+  background: transparent;
+  border-top: 1px solid var(--border);
 }
 
-.config-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #2e7d32;
-  margin-bottom: 8px;
+.config-body {
+  margin-top: 8px;
 }
 
 .config-row {
   display: flex;
   gap: 8px;
+  margin-top: 6px;
 }
 
 .config-row input {
   flex: 1;
   padding: 6px 10px;
-  border: 1.5px solid #c8e6c9;
+  border: 1.5px solid var(--border);
   border-radius: 4px;
   font-size: 12px;
 }

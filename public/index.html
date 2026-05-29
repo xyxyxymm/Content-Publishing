@@ -38,13 +38,13 @@
         <input type="hidden" id="cover-data" value="">
       </div>
 
-      <div class="form-group">
-        <label for="summary">摘要（可选，用于公众号等平台）</label>
+      <div class="form-group" id="summary-group" style="display:none">
+        <label for="summary">摘要</label>
         <textarea id="summary" rows="2" placeholder="简要描述文章内容..." maxlength="200"></textarea>
         <span class="char-count"><span id="summary-count">0</span>/200</span>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" id="category-group" style="display:none">
         <label for="category">分类</label>
         <select id="category">
           <option value="">选择分类</option>
@@ -60,8 +60,8 @@
         </select>
       </div>
 
-      <div class="form-group">
-        <label for="tags">标签（逗号分隔）</label>
+      <div class="form-group" id="tags-group" style="display:none">
+        <label for="tags">标签</label>
         <input type="text" id="tags" placeholder="AI, 科技, 效率工具">
       </div>
 
@@ -71,7 +71,7 @@
       </div>
 
       <div class="form-group">
-        <label>正文内容（Markdown 格式）</label>
+        <label>正文</label>
         <div class="editor-wrapper">
           <div class="editor-toolbar">
             <button type="button" class="tb-btn" data-action="bold" title="粗体">B</button>
@@ -153,14 +153,18 @@
       </div>
 
       <!-- 微信API配置 -->
-      <div class="wechat-config" id="wechat-config" style="display:none;">
-        <div class="config-title">微信公众号 API 配置</div>
-        <div class="config-row">
-          <input type="text" id="wechat-appid" placeholder="AppID">
-          <input type="password" id="wechat-secret" placeholder="AppSecret">
-          <button id="btn-save-wechat" class="btn btn-primary btn-sm">保存</button>
+      <div class="wechat-config" id="wechat-config">
+        <button id="btn-toggle-wechat" class="btn btn-sm btn-outline">
+          ⚙ 微信公众号 API 配置
+        </button>
+        <div class="config-body" id="config-body" style="display:none">
+          <div class="config-row">
+            <input type="text" id="wechat-appid" placeholder="AppID">
+            <input type="password" id="wechat-secret" placeholder="AppSecret">
+            <button id="btn-save-wechat" class="btn btn-primary btn-sm">保存</button>
+          </div>
+          <span id="wechat-status" class="config-status"></span>
         </div>
-        <span id="wechat-status" class="config-status"></span>
       </div>
     </section>
   </div>

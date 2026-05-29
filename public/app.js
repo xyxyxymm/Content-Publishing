@@ -143,6 +143,7 @@
         }
         updatePreviewTabs();
         updatePublishButton();
+        updateSummaryVisibility();
         if (state.selectedPlatforms.size > 0) refreshPreviews();
       });
     });
@@ -222,7 +223,8 @@
 
   function renderZhihu(p) {
     var tags = p.tags && p.tags.length ? '<div class="zhihu-tags">' + p.tags.map(function (t) { return '<span class="zhihu-tag">' + escapeHtml(t) + '</span>'; }).join('') + '</div>' : '';
-    return '<div class="preview-zhihu"><div class="preview-zhihu-header"><div class="zhihu-title">' + escapeHtml(p.title) + '</div>' + tags + '</div><div class="preview-zhihu-body">' + (p.content || '') + '</div></div>';
+    var body = p.htmlContent || p.content || '';
+    return '<div class="preview-zhihu"><div class="preview-zhihu-header"><div class="zhihu-title">' + escapeHtml(p.title) + '</div>' + tags + '</div><div class="preview-zhihu-body">' + body + '</div></div>';
   }
 
   function renderBilibili(p) {
@@ -247,6 +249,17 @@
       btnPublish.disabled = true;
       btnPublish.innerHTML = '🚀 请先选择目标平台';
     }
+  }
+
+  function updateSummaryVisibility() {
+    var summaryGroup = $('#summary-group');
+    if (summaryGroup) summaryGroup.style.display = state.selectedPlatforms.has('wechat') ? 'block' : 'none';
+
+    var tagsGroup = $('#tags-group');
+    if (tagsGroup) tagsGroup.style.display = (state.selectedPlatforms.has('zhihu') || state.selectedPlatforms.has('xiaohongshu')) ? 'block' : 'none';
+
+    var categoryGroup = $('#category-group');
+    if (categoryGroup) categoryGroup.style.display = state.selectedPlatforms.has('bilibili') ? 'block' : 'none';
   }
 
   // 辅助发布：打开平台编辑器 + 复制内容
@@ -458,13 +471,18 @@
         btn.classList.add('active');
         state.publishMode = btn.dataset.mode;
         updatePublishButton();
-        // 真实API模式时显示微信配置
-        if (state.publishMode === 'real') {
-          wechatConfig.style.display = 'block';
-        } else {
-          wechatConfig.style.display = 'none';
-        }
       });
+    });
+
+    // 微信配置面板的展开/收起
+    var wechatToggleBtn = $('#btn-toggle-wechat');
+    var configBody = $('#config-body');
+    wechatToggleBtn.addEventListener('click', function () {
+      if (configBody.style.display === 'none') {
+        configBody.style.display = 'block';
+      } else {
+        configBody.style.display = 'none';
+      }
     });
   }
 
@@ -474,6 +492,8 @@
       if (data.configured) {
         wechatStatus.textContent = '✅ 微信API已配置';
         wechatStatus.className = 'config-status ok';
+        var btn = $('#btn-toggle-wechat');
+        if (btn) btn.textContent = '⚙ 微信公众号 API 配置 (已配置)';
       } else {
         wechatStatus.textContent = '⚠ 未配置微信API（不影响辅助发布）';
         wechatStatus.className = 'config-status err';
@@ -512,12 +532,30 @@
       apiPost('/api/wechat/config', { appId: appId, appSecret: secret }).then(function () {
         showToast('微信API配置成功', 'success');
         checkWechatStatus();
+        var btn = $('#btn-toggle-wechat');
+        if (wechatStatus.textContent.indexOf('✅') !== -1) {
+          btn.textContent = '⚙ 微信公众号 API 配置 (已配置)';
+          $('#config-body').style.display = 'none';
+        }
       }).catch(function (err) { showToast('配置失败: ' + err.message, 'error'); });
     });
 
     titleInput.addEventListener('input', function () { $('#title-count').textContent = titleInput.value.length; });
     summaryInput.addEventListener('input', function () { $('#summary-count').textContent = summaryInput.value.length; });
     contentInput.addEventListener('input', function () { $('#content-count').textContent = contentInput.value.length; });
+
+    contentInput.addEventListener('paste', function (e) {
+      e.preventDefault();
+      var clipboardData = e.clipboardData || window.clipboardData;
+      var text = clipboardData.getData('text/plain');
+      if (!text) return;
+      var ta = this;
+      var start = ta.selectionStart;
+      var end = ta.selectionEnd;
+      ta.value = ta.value.substring(0, start) + text + ta.value.substring(end);
+      ta.selectionStart = ta.selectionEnd = start + text.length;
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    });
 
     // 封面：粘贴 / 点击 / 拖拽
     coverDropzone.addEventListener('paste', function (e) {
@@ -624,6 +662,7 @@
       renderPlatformChips();
       bindEvents();
       updatePublishButton();
+      updateSummaryVisibility();
       loadHistory();
       console.log('[发布工具] 初始化完成。当前模式: ' + state.publishMode);
     }).catch(function (err) {

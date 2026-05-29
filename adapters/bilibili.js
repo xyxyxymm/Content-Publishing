@@ -23,20 +23,16 @@ class BilibiliAdapter extends PlatformAdapter {
   }
 
   transform(contentModel) {
-    const html = marked.parse(contentModel.content || '', { breaks: true });
+    const html = marked.parse(contentModel.content || '');
 
     return {
       title: contentModel.title.slice(0, 100),
-      content: this.applyBilibiliStyles(html),
+      content: html,
       rawText: contentModel.content,
       coverImage: contentModel.coverImage || '',
       category: this.mapCategory(contentModel.category),
       tags: (contentModel.tags || []).slice(0, 10),
-      // B站专栏支持插入视频 (BV号)
-      // embeddedVideos: [],
-      // 允许设置转载/原创
       original: 1,
-      // 专栏摘要
       summary: contentModel.summary || contentModel.content.replace(/[#*`>\-\n]/g, ' ').slice(0, 200)
     };
   }
@@ -58,16 +54,6 @@ class BilibiliAdapter extends PlatformAdapter {
       ],
       canOpenEditor: true
     };
-  }
-
-  applyBilibiliStyles(html) {
-    // B站专栏使用类微信公众号的富文本编辑器，但风格偏ACG/A站
-    return html
-      .replace(/<h1/g, '<h1 style="font-size:24px;font-weight:bold;line-height:1.5;margin:20px 0 12px;"')
-      .replace(/<h2/g, '<h2 style="font-size:20px;font-weight:bold;line-height:1.5;margin:16px 0 10px;"')
-      .replace(/<p>/g, '<p style="font-size:15px;line-height:1.8;color:#222;margin:8px 0;">')
-      .replace(/<blockquote/g, '<blockquote style="border-left:3px solid #fb7299;padding:8px 16px;background:#fff5f7;margin:12px 0;"')
-      .replace(/<img /g, '<img style="max-width:100%;display:block;margin:12px auto;" ');
   }
 
   mapCategory(category) {

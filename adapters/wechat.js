@@ -1,7 +1,6 @@
 // 微信公众号适配器
 const { marked } = require('marked');
 const PlatformAdapter = require('../core/adapter-base');
-const ContentModel = require('../core/content-model');
 
 class WechatAdapter extends PlatformAdapter {
   static get platformName() { return '微信公众号'; }
@@ -25,20 +24,16 @@ class WechatAdapter extends PlatformAdapter {
   }
 
   transform(contentModel) {
-    const html = marked.parse(contentModel.content || '', { breaks: true });
-
-    // 公众号富文本样式处理
-    const styledHtml = this.applyWechatStyles(html);
+    const html = marked.parse(contentModel.content || '');
     const summary = (contentModel.summary || this.extractSummary(contentModel.content)).slice(0, 120);
 
     return {
       title: contentModel.title.slice(0, 64),
-      content: styledHtml,
+      content: html,
       summary,
       coverImage: contentModel.coverImage,
       author: contentModel.author,
       originalFlag: true,
-      // 公众号特有：原文链接
       sourceUrl: contentModel.originalUrl || '',
       rawText: contentModel.content
     };
@@ -61,17 +56,6 @@ class WechatAdapter extends PlatformAdapter {
       ],
       canOpenEditor: true
     };
-  }
-
-  applyWechatStyles(html) {
-    // 为公众号适配样式：添加微信支持的CSS和内联样式
-    return html
-      .replace(/<h1/g, '<h1 style="font-size:22px;color:#333;text-align:center;margin:20px 0;"')
-      .replace(/<h2/g, '<h2 style="font-size:18px;color:#555;margin:16px 0;"')
-      .replace(/<h3/g, '<h3 style="font-size:16px;color:#666;margin:12px 0;"')
-      .replace(/<p>/g, '<p style="font-size:15px;color:#3f3f3f;line-height:1.8;letter-spacing:0.5px;margin:10px 0;">')
-      .replace(/<blockquote/g, '<blockquote style="border-left:4px solid #1aad19;padding:10px 16px;background:#f8f8f8;margin:16px 0;"')
-      .replace(/<img /g, '<img style="max-width:100%;display:block;margin:16px auto;border-radius:4px;" ');
   }
 
   extractSummary(text) {
