@@ -1,0 +1,210 @@
+// 多平台内容发布工具 - 后端服务
+const express = require('express');
+const path = require('path');
+const ContentModel = require('./core/content-model');
+const AdapterRegistry = require('./core/adapter-registry');
+const Publisher = require('./core/publisher');
+const WechatApiPublisher = require('./core/wechat-api');
+
+const app = express();
+const PORT = 3000;
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 初始化适配器注册中心 + 自动发现
+const registry = new AdapterRegistry();
+registry.autoDiscover(path.join(__dirname, 'adapters'));
+
+// 初始化发布器
+const mockPublisher = new Publisher(registry);
+const wechatApi = new WechatApiPublisher();
+
+// ============ API 路由 ============
+
+// 获取所有平台列表
+app.get('/api/platforms', (req, res) => {
+  try {
+    const platforms = registry.getPlatforms();
+    res.json({ success: true, data: platforms });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 预览：转换内容到指定平台并返回预览
+app.post('/api/preview', (req, res) => {
+  try {
+    const { platformId, ...contentData } = req.body;
+    const contentModel = new ContentModel(contentData);
+
+    if (platformId === 'all') {
+      const previews = registry.previewAll(contentModel);
+      return res.json({ success: true, data: previews });
+    }
+
+    const preview = registry.preview(platformId, contentModel);
+    res.json({ success: true, data: preview });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 转换：仅转换不预览
+app.post('/api/transform', (req, res) => {
+  try {
+    const { platformId, ...contentData } = req.body;
+    const contentModel = new ContentModel(contentData);
+
+    if (platformId === 'all') {
+      const results = registry.transformAll(contentModel);
+      return res.json({ success: true, data: results });
+    }
+
+    const result = registry.transform(platformId, contentModel);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 获取各平台的发布信息（编辑器URL、操作指南等）
+app.post('/api/publish-info', (req, res) => {
+  try {
+    const { platformIds, ...contentData } = req.body;
+    const contentModel = new ContentModel(contentData);
+    const platforms = Array.isArray(platformIds) ? platformIds : [platformIds];
+
+    const results = platforms.map(pid => {
+      const adapter = registry.getAdapter(pid);
+      const adapted = adapter.transform(contentModel);
+      const info = adapter.getPublishInfo(contentModel);
+      return {
+        ...info,
+        adaptedContent: adapted,
+        wechatConfigured: pid === 'wechat' ? wechatApi.isConfigured : false
+      };
+    });
+
+    res.json({ success: true, data: results });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 模拟发布
+app.post('/api/publish', async (req, res) => {
+  try {
+    const { platformIds, ...contentData } = req.body;
+    const contentModel = new ContentModel(contentData);
+    const platforms = Array.isArray(platformIds) ? platformIds : [platformIds];
+
+    const results = await mockPublisher.publishMulti(platforms, contentModel);
+    res.json({ success: true, data: results });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 真实发布（微信公众号通过API创建草稿）
+app.post('/api/publish-real', async (req, res) => {
+  try {
+    const { platformIds, ...contentData } = req.body;
+    const contentModel = new ContentModel(contentData);
+    const platforms = Array.isArray(platformIds) ? platformIds : [platformIds];
+    const results = [];
+
+    for (const pid of platforms) {
+      if (pid === 'wechat' && wechatApi.isConfigured) {
+        const adapter = registry.getAdapter('wechat');
+        const adapted = adapter.transform(contentModel);
+
+        try {
+          const draft = await wechatApi.createDraft([{
+            title: adapted.title,
+            content: adapted.content,
+            author: adapted.author || '',
+            digest: adapted.summary || '',
+            content_source_url: adapted.sourceUrl || '',
+            coverImage: adapted.coverImage
+          }]);
+
+          results.push({
+            platformId: 'wechat',
+            platformName: '微信公众号',
+            status: 'published',
+            publishedAt: new Date().toISOString(),
+            platformUrl: draft.url,
+            isReal: true,
+            message: '草稿已创建，请到公众号后台确认发布'
+          });
+        } catch (err) {
+          results.push({
+            platformId: 'wechat',
+            platformName: '微信公众号',
+            status: 'failed',
+            error: err.message,
+            isReal: true
+          });
+        }
+      } else {
+        // 非微信或无配置的平台，使用模拟发布
+        const result = await mockPublisher.publishMulti([pid], contentModel);
+        results.push(...result);
+      }
+    }
+
+    mockPublisher.history.push(...results.filter(r => r.status === 'published'));
+    res.json({ success: true, data: results });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 获取发布历史
+app.get('/api/history', (req, res) => {
+  try {
+    const history = mockPublisher.getHistory();
+    res.json({ success: true, data: history });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 清除发布历史
+app.delete('/api/history', (req, res) => {
+  try {
+    mockPublisher.clearHistory();
+    res.json({ success: true, message: '发布历史已清除' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 微信凭证配置
+app.post('/api/wechat/config', (req, res) => {
+  try {
+    const { appId, appSecret } = req.body;
+    if (!appId || !appSecret) {
+      return res.status(400).json({ success: false, error: '请提供 appId 和 appSecret' });
+    }
+    wechatApi.configure(appId, appSecret);
+    res.json({ success: true, message: '微信API已配置', configured: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/wechat/status', (req, res) => {
+  res.json({ success: true, configured: wechatApi.isConfigured });
+});
+
+// 获取所有已注册平台
+const platformList = registry.getPlatforms();
+console.log(`已加载 ${platformList.length} 个平台适配器:`);
+platformList.forEach(p => console.log(`  - ${p.name} (${p.id})`));
+
+app.listen(PORT, () => {
+  console.log(`\n多平台内容发布工具已启动: http://localhost:${PORT}`);
+});
+

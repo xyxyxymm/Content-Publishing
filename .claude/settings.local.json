@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:perrotta.dev)",
+      "Bash(bash /c/Users/xuyyy/.claude/statusline.sh)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(/c/nvm4w/nodejs/node /c/Users/xuyyy/.claude/statusline.cjs)"
+    ]
+  }
+}

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多平台内容发布工具</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>多平台内容发布工具</h1>
+    <span class="subtitle">一次编辑 · 多平台适配 · 一键发布</span>
+  </header>
+
+  <div class="main-container">
+    <!-- 左侧编辑区 -->
+    <section class="editor-panel">
+      <div class="panel-header">内容编辑</div>
+
+      <div class="form-group">
+        <label for="title">标题</label>
+        <input type="text" id="title" placeholder="输入文章标题" maxlength="100">
+        <span class="char-count"><span id="title-count">0</span>/100</span>
+      </div>
+
+      <div class="form-group">
+        <label for="coverImage">封面图 URL（可选）</label>
+        <input type="text" id="coverImage" placeholder="https://example.com/cover.jpg">
+      </div>
+
+      <div class="form-group">
+        <label for="summary">摘要（可选，用于公众号等平台）</label>
+        <textarea id="summary" rows="2" placeholder="简要描述文章内容..." maxlength="200"></textarea>
+        <span class="char-count"><span id="summary-count">0</span>/200</span>
+      </div>
+
+      <div class="form-group">
+        <label for="category">分类</label>
+        <select id="category">
+          <option value="">选择分类</option>
+          <option value="科技">科技</option>
+          <option value="生活">生活</option>
+          <option value="游戏">游戏</option>
+          <option value="动画">动画</option>
+          <option value="影视">影视</option>
+          <option value="知识">知识</option>
+          <option value="时尚">时尚</option>
+          <option value="美食">美食</option>
+          <option value="数码">数码</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="tags">标签（逗号分隔）</label>
+        <input type="text" id="tags" placeholder="AI, 科技, 效率工具">
+      </div>
+
+      <div class="form-group">
+        <label for="author">作者</label>
+        <input type="text" id="author" placeholder="作者名称">
+      </div>
+
+      <div class="form-group">
+        <label>正文内容（Markdown 格式）</label>
+        <div class="editor-wrapper">
+          <div class="editor-toolbar">
+            <button type="button" class="tb-btn" data-action="bold" title="粗体">B</button>
+            <button type="button" class="tb-btn" data-action="italic" title="斜体">I</button>
+            <button type="button" class="tb-btn" data-action="heading" title="标题">H</button>
+            <button type="button" class="tb-btn" data-action="link" title="链接">🔗</button>
+            <button type="button" class="tb-btn" data-action="image" title="图片">🖼</button>
+            <button type="button" class="tb-btn" data-action="quote" title="引用">❝</button>
+            <button type="button" class="tb-btn" data-action="list" title="列表">≡</button>
+            <button type="button" class="tb-btn" data-action="code" title="代码">〈/〉</button>
+            <button type="button" class="tb-btn" data-action="hr" title="分割线">—</button>
+          </div>
+          <textarea id="content" placeholder="在此编写 Markdown 内容...
+
+# 一级标题
+## 二级标题
+
+正文内容支持 **粗体**、*斜体*、[链接](url)、![图片](url)
+
+> 引用文字
+
+- 列表项1
+- 列表项2
+
+```代码块```"></textarea>
+        </div>
+        <span class="char-count"><span id="content-count">0</span> 字符</span>
+      </div>
+    </section>
+
+    <!-- 右侧预览+发布区 -->
+    <section class="preview-panel">
+      <div class="panel-header">
+        <span>多平台预览</span>
+        <div class="panel-actions">
+          <button id="btn-preview-all" class="btn btn-primary btn-sm">刷新预览</button>
+        </div>
+      </div>
+
+      <!-- 平台选择 -->
+      <div class="platform-selector" id="platform-selector">
+        <div class="platform-chip wechat active" data-platform="wechat">
+          <span class="chip-dot"></span>微信公众号
+        </div>
+        <div class="platform-chip zhihu active" data-platform="zhihu">
+          <span class="chip-dot"></span>知乎
+        </div>
+        <div class="platform-chip bilibili active" data-platform="bilibili">
+          <span class="chip-dot"></span>B站
+        </div>
+        <div class="platform-chip xiaohongshu active" data-platform="xiaohongshu">
+          <span class="chip-dot"></span>小红书
+        </div>
+      </div>
+
+      <!-- 预览标签页 -->
+      <div class="preview-tabs" id="preview-tabs"></div>
+      <div class="preview-content" id="preview-content">
+        <div class="preview-placeholder">
+          <div class="placeholder-icon">📝</div>
+          <p>在左侧编辑内容后，选择平台查看格式适配效果</p>
+        </div>
+      </div>
+
+      <!-- 发布操作区 -->
+      <div class="publish-bar">
+        <div class="publish-mode-tabs">
+          <button class="publish-mode-btn active" data-mode="assisted">辅助发布（推荐）</button>
+          <button class="publish-mode-btn" data-mode="simulate">模拟发布</button>
+          <button class="publish-mode-btn" data-mode="real">真实API</button>
+        </div>
+        <div class="publish-actions-row">
+          <button id="btn-publish" class="btn btn-publish">
+            🚀 一键发布到所选平台
+          </button>
+          <button id="btn-copy-all" class="btn btn-primary btn-sm">📋 复制全部内容</button>
+        </div>
+        <span class="publish-status" id="publish-status"></span>
+      </div>
+
+      <!-- 微信API配置 -->
+      <div class="wechat-config" id="wechat-config" style="display:none;">
+        <div class="config-title">微信公众号 API 配置</div>
+        <div class="config-row">
+          <input type="text" id="wechat-appid" placeholder="AppID">
+          <input type="password" id="wechat-secret" placeholder="AppSecret">
+          <button id="btn-save-wechat" class="btn btn-primary btn-sm">保存</button>
+        </div>
+        <span id="wechat-status" class="config-status"></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- 发布历史 -->
+  <section class="history-section" id="history-section">
+    <div class="panel-header">
+      <span>发布历史</span>
+      <button id="btn-clear-history" class="btn btn-sm btn-outline">清除历史</button>
+    </div>
+    <div class="history-list" id="history-list">
+      <p class="empty-hint">暂无发布记录</p>
+    </div>
+  </section>
+
+  <!-- Toast 提示 -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
