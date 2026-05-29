@@ -578,6 +578,73 @@ body {
   color: var(--danger);
 }
 
+/* ============= Cover Upload ============= */
+.cover-upload {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.cover-dropzone {
+  width: 100px;
+  height: 56px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #fafbfc;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.cover-dropzone:hover,
+.cover-dropzone.drag-over {
+  border-color: var(--primary-light);
+  background: #f8f7ff;
+}
+
+.cover-placeholder {
+  font-size: 11px;
+  color: #b2bec3;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.cover-dropzone.has-image .cover-placeholder {
+  display: none;
+}
+
+.cover-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-actions {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cover-actions input {
+  width: 100%;
+  padding: 7px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fafbfc;
+  font-family: inherit;
+}
+
+.cover-actions input:focus {
+  outline: none;
+  border-color: var(--primary-light);
+}
+
 /* ============= WeChat Config ============= */
 .wechat-config {
   padding: 12px 20px;

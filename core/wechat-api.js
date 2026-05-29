@@ -100,12 +100,21 @@ class WechatApiPublisher {
     for (const article of articles) {
       let thumbMediaId = article.thumb_media_id || '';
 
-      // 用户提供了封面图URL → 下载后上传到微信
-      if (!thumbMediaId && article.coverImage && article.coverImage.startsWith('http')) {
+      // 用户提供了封面图 → 下载或解码后上传到微信
+      if (!thumbMediaId && article.coverImage) {
         try {
-          const imgBuf = await this.downloadFile(article.coverImage);
-          const result = await this.wechatUpload(token, 'image', imgBuf, 'cover.jpg', 'image/jpeg');
-          thumbMediaId = result.media_id;
+          let imgBuf;
+          if (article.coverImage.startsWith('data:')) {
+            // base64 data URL
+            const b64 = article.coverImage.split(',')[1];
+            imgBuf = Buffer.from(b64, 'base64');
+          } else if (article.coverImage.startsWith('http')) {
+            imgBuf = await this.downloadFile(article.coverImage);
+          }
+          if (imgBuf) {
+            const result = await this.wechatUpload(token, 'image', imgBuf, 'cover.jpg', 'image/jpeg');
+            thumbMediaId = result.media_id;
+          }
         } catch (err) {
           console.warn('封面图上传失败:', err.message);
         }
@@ -126,7 +135,7 @@ class WechatApiPublisher {
         thumb_media_id: thumbMediaId,
         need_open_comment: 0,
         only_fans_can_comment: 0,
-        show_cover_pic: (article.coverImage && article.coverImage.startsWith('http')) ? 1 : 0
+        show_cover_pic: (article.coverImage && (article.coverImage.startsWith('http') || article.coverImage.startsWith('data:'))) ? 1 : 0
       };
 
       if (article.author) item.author = article.author;

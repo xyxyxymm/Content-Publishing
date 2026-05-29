@@ -9,6 +9,7 @@
   var contentInput, platformSelector, previewTabs, previewContent;
   var btnPublish, btnCopyAll, publishStatus, historyList, toast;
   var wechatConfig, wechatAppid, wechatSecret, wechatStatus;
+  var coverDropzone, coverPreview, coverDataInput, btnCoverClear;
 
   var state = {
     platforms: [],
@@ -23,6 +24,10 @@
   function initDom() {
     titleInput = $('#title');
     coverInput = $('#coverImage');
+    coverDropzone = $('#cover-dropzone');
+    coverPreview = $('#cover-preview');
+    coverDataInput = $('#cover-data');
+    btnCoverClear = $('#btn-cover-clear');
     summaryInput = $('#summary');
     categorySelect = $('#category');
     tagsInput = $('#tags');
@@ -87,15 +92,25 @@
   // ============= Content =============
   function getContentData() {
     var tags = (tagsInput.value || '').split(/[,，]/).map(function (t) { return t.trim(); }).filter(Boolean);
+    var rawCover = (coverDataInput.value || coverInput.value || '').trim();
+    // 预览时 base64 太长会拖慢请求，只传标记；发布时才传完整数据
+    var isDataUrl = rawCover.startsWith('data:');
     return {
       title: (titleInput.value || '').trim(),
       content: contentInput.value || '',
       summary: (summaryInput.value || '').trim(),
       tags: tags,
       category: categorySelect.value || '',
-      coverImage: (coverInput.value || '').trim(),
+      coverImage: rawCover,
+      _coverIsDataUrl: isDataUrl,
       author: (authorInput.value || '').trim()
     };
+  }
+
+  function getPublishData() {
+    var cd = getContentData();
+    // 发布时确保传完整封面数据
+    return cd;
   }
 
   function escapeHtml(text) {
@@ -503,6 +518,70 @@
     titleInput.addEventListener('input', function () { $('#title-count').textContent = titleInput.value.length; });
     summaryInput.addEventListener('input', function () { $('#summary-count').textContent = summaryInput.value.length; });
     contentInput.addEventListener('input', function () { $('#content-count').textContent = contentInput.value.length; });
+
+    // 封面：粘贴 / 点击 / 拖拽
+    coverDropzone.addEventListener('paste', function (e) {
+      var items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          e.preventDefault();
+          handleCoverFile(items[i].getAsFile());
+          return;
+        }
+      }
+    });
+
+    coverDropzone.addEventListener('click', function () {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = function () { if (input.files[0]) handleCoverFile(input.files[0]); };
+      input.click();
+    });
+
+    coverDropzone.addEventListener('dragover', function (e) { e.preventDefault(); coverDropzone.classList.add('drag-over'); });
+    coverDropzone.addEventListener('dragleave', function () { coverDropzone.classList.remove('drag-over'); });
+    coverDropzone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      coverDropzone.classList.remove('drag-over');
+      var file = e.dataTransfer.files[0];
+      if (file && file.type.indexOf('image') !== -1) handleCoverFile(file);
+    });
+
+    btnCoverClear.addEventListener('click', function () {
+      coverDataInput.value = '';
+      coverInput.value = '';
+      coverPreview.style.display = 'none';
+      coverPreview.src = '';
+      coverDropzone.classList.remove('has-image');
+      btnCoverClear.style.display = 'none';
+    });
+
+    // URL 输入变化时也更新预览
+    coverInput.addEventListener('input', function () {
+      var url = coverInput.value.trim();
+      if (url && url.startsWith('http')) {
+        coverPreview.src = url;
+        coverPreview.style.display = 'block';
+        coverDropzone.classList.add('has-image');
+        btnCoverClear.style.display = 'inline-flex';
+        coverDataInput.value = '';
+      }
+    });
+
+    function handleCoverFile(file) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        coverDataInput.value = reader.result;
+        coverInput.value = '';
+        coverPreview.src = reader.result;
+        coverPreview.style.display = 'block';
+        coverDropzone.classList.add('has-image');
+        btnCoverClear.style.display = 'inline-flex';
+      };
+      reader.readAsDataURL(file);
+    }
 
     var toolbar = document.querySelector('.editor-toolbar');
     if (toolbar) {

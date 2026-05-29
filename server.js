@@ -9,16 +9,28 @@ const WechatApiPublisher = require('./core/wechat-api');
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 初始化适配器注册中心 + 自动发现
 const registry = new AdapterRegistry();
 registry.autoDiscover(path.join(__dirname, 'adapters'));
 
 // 初始化发布器
 const mockPublisher = new Publisher(registry);
 const wechatApi = new WechatApiPublisher();
+
+// 尝试从文件加载微信配置
+try {
+  const fs = require('fs');
+  const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'wechat-config.json'), 'utf8'));
+  if (cfg.appId && cfg.appSecret) {
+    wechatApi.configure(cfg.appId, cfg.appSecret);
+    console.log('已从 wechat-config.json 加载微信API配置');
+  }
+} catch (e) {
+  // 文件不存在，跳过
+}
 
 // ============ API 路由 ============
 
@@ -198,7 +210,15 @@ app.post('/api/wechat/config', (req, res) => {
       return res.status(400).json({ success: false, error: '请提供 appId 和 appSecret' });
     }
     wechatApi.configure(appId, appSecret);
-    res.json({ success: true, message: '微信API已配置', configured: true });
+
+    const fs = require('fs');
+    fs.writeFileSync(
+      path.join(__dirname, 'wechat-config.json'),
+      JSON.stringify({ appId, appSecret }, null, 2),
+      'utf8'
+    );
+
+    res.json({ success: true, message: '微信API已配置并保存', configured: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

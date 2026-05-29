@@ -24,8 +24,18 @@
       </div>
 
       <div class="form-group">
-        <label for="coverImage">封面图 URL（可选）</label>
-        <input type="text" id="coverImage" placeholder="https://example.com/cover.jpg">
+        <label>封面</label>
+        <div class="cover-upload" id="cover-upload">
+          <div class="cover-dropzone" id="cover-dropzone">
+            <span class="cover-placeholder">📷 点击或 Ctrl+V 粘贴图片</span>
+            <img class="cover-preview" id="cover-preview" style="display:none" alt="">
+          </div>
+          <div class="cover-actions">
+            <input type="text" id="coverImage" placeholder="或输入图片URL：https://...">
+            <button type="button" id="btn-cover-clear" class="btn btn-sm btn-outline" style="display:none">清除</button>
+          </div>
+        </div>
+        <input type="hidden" id="cover-data" value="">
       </div>
 
       <div class="form-group">
