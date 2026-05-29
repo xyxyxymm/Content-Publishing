@@ -119,6 +119,11 @@ app.post('/api/publish-real', async (req, res) => {
         const adapter = registry.getAdapter('wechat');
         const adapted = adapter.transform(contentModel);
 
+        console.log('\n[微信API] 准备创建草稿');
+        console.log('  标题:', adapted.title);
+        console.log('  内容长度:', adapted.content.length);
+        console.log('  封面图:', adapted.coverImage || '无');
+
         try {
           const draft = await wechatApi.createDraft([{
             title: adapted.title,
@@ -129,6 +134,9 @@ app.post('/api/publish-real', async (req, res) => {
             coverImage: adapted.coverImage
           }]);
 
+          console.log('[微信API] 草稿创建成功！');
+          console.log('  media_id:', draft.media_id);
+
           results.push({
             platformId: 'wechat',
             platformName: '微信公众号',
@@ -136,9 +144,10 @@ app.post('/api/publish-real', async (req, res) => {
             publishedAt: new Date().toISOString(),
             platformUrl: draft.url,
             isReal: true,
-            message: '草稿已创建，请到公众号后台确认发布'
+            message: '草稿已写入。请到 mp.weixin.qq.com → 管理 → 素材管理 → 草稿箱 查看'
           });
         } catch (err) {
+          console.error('[微信API] 草稿创建失败:', err.message);
           results.push({
             platformId: 'wechat',
             platformName: '微信公众号',
