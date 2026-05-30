@@ -7,7 +7,7 @@
 
   var titleInput, coverInput, summaryInput, categorySelect, tagsInput, authorInput;
   var contentInput, platformSelector, previewTabs, previewContent;
-  var btnPublish, publishStatus, historyList, toast;
+  var btnPublish, btnPublishAssisted, publishStatus, historyList, toast;
   var wechatConfig, wechatAppid, wechatSecret, wechatStatus;
   var coverDropzone, coverPreview, coverDataInput, btnCoverClear;
 
@@ -36,6 +36,7 @@
     previewTabs = $('#preview-tabs');
     previewContent = $('#preview-content');
     btnPublish = $('#btn-publish');
+    btnPublishAssisted = $('#btn-publish-assisted');
     publishStatus = $('#publish-status');
     historyList = $('#history-list');
     toast = $('#toast');
@@ -196,16 +197,13 @@
       case 'bilibili': html += renderBilibili(p); break;
       case 'xiaohongshu': html += renderXiaohongshu(p); break;
     }
-    if (data.tips && data.tips.length) {
-      html += '<div class="preview-tips">' + data.tips.map(function (t) { return '<div class="tip-item">💡 ' + escapeHtml(t) + '</div>'; }).join('') + '</div>';
-    }
     previewContent.innerHTML = html;
   }
 
   function renderWechat(p) {
     var cover = p.coverImage ? '<div class="preview-cover"><img src="' + escapeHtml(p.coverImage) + '" alt="封面" onerror="this.parentElement.innerHTML=\'封面图加载失败\'"></div>' : '<div class="preview-cover">📷 封面图（未设置）</div>';
     var summary = p.summary ? '<div class="preview-summary">📋 ' + escapeHtml(p.summary) + '</div>' : '';
-    return '<div class="preview-wechat"><div class="preview-title">' + escapeHtml(p.title) + '</div>' + cover + summary + '<div class="preview-body">' + (p.content || '') + '</div><div style="text-align:center;color:#999;font-size:12px;margin-top:20px;padding:16px;border-top:1px solid #eee;">— END —<br><span style="font-size:10px;">模拟公众号文章</span></div></div>';
+    return '<div class="preview-wechat"><div class="preview-title">' + escapeHtml(p.title) + '</div>' + cover + summary + '<div class="preview-body">' + (p.content || '') + '</div></div>';
   }
 
   function renderZhihu(p) {
@@ -215,8 +213,8 @@
   }
 
   function renderBilibili(p) {
-    var tags = p.tags && p.tags.length ? p.tags.map(function (t) { return '<span class="zhihu-tag">' + escapeHtml(t) + '</span>'; }).join('') : '';
-    return '<div class="preview-bilibili"><div class="preview-bili-header"><div class="bili-title">' + escapeHtml(p.title) + '</div></div><div class="preview-bili-body">' + (p.content || '') + '</div></div>';
+    var body = p.htmlContent || p.content || '';
+    return '<div class="preview-bilibili"><div class="preview-bili-header"><div class="bili-title">' + escapeHtml(p.title) + '</div></div><div class="preview-bili-body">' + body + '</div></div>';
   }
 
   function renderXiaohongshu(p) {
@@ -232,11 +230,17 @@
       for (var i = 0; i < state.platforms.length; i++) {
         if (state.platforms[i].id === pid) { pname = state.platforms[i].name; break; }
       }
-      if (pid === 'wechat') btnPublish.innerHTML = '🚀 真实API发布到 ' + pname;
-      else btnPublish.innerHTML = '🚀 辅助发布到 ' + pname;
+      if (pid === 'wechat') {
+        btnPublish.innerHTML = '🚀 真实API发布到 ' + pname;
+        btnPublishAssisted.style.display = 'none';
+      } else {
+        btnPublish.innerHTML = '🚀 辅助发布到 ' + pname;
+        btnPublishAssisted.style.display = 'none';
+      }
     } else {
       btnPublish.disabled = true;
       btnPublish.innerHTML = '🚀 请先选择目标平台';
+      btnPublishAssisted.style.display = 'none';
     }
   }
 
@@ -418,6 +422,11 @@
       var pid = state.selectedPlatforms.size > 0 ? Array.from(state.selectedPlatforms)[0] : '';
       if (pid === 'wechat') realApiPublish();
       else assistedPublish();
+    });
+
+    btnPublishAssisted.addEventListener('click', function () {
+      if (state.isPublishing) return;
+      assistedPublish();
     });
 
     $('#btn-preview-all').addEventListener('click', function () {

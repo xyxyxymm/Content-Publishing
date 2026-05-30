@@ -1,5 +1,19 @@
-// 小红书适配器
+// 小红书适配器 - 生成小红书风格文案（emoji + 短段落 + 话题标签）
 const PlatformAdapter = require('../core/adapter-base');
+
+// 主题emoji映射：根据标题/内容关键词自动选择
+const TOPIC_EMOJIS = {
+  '教育': '📚', '学习': '📖', '学校': '🏫', '孩子': '👶', '家长': '👨‍👩‍👧',
+  '科技': '💻', 'AI': '🤖', '技术': '⚙️', '数码': '📱',
+  '生活': '🌟', '日常': '📝', '分享': '✨',
+  '美食': '🍽️', '旅游': '✈️', '健康': '💪', '运动': '🏃',
+  '职场': '💼', '效率': '⏰', '工具': '🛠️',
+  '情感': '💕', '心理': '🧠', '成长': '🌱',
+  '金融': '💰', '理财': '📊', '法律': '⚖️',
+};
+
+const BULLET_EMOJIS = ['✨', '💡', '📌', '🔹', '▫️', '🌟', '✅', '👉'];
+const SECTION_EMOJIS = ['🔥', '📌', '💡', '⚡', '🔍', '🎯', '📢', '💬'];
 
 class XiaohongshuAdapter extends PlatformAdapter {
   static get platformName() { return '小红书'; }
@@ -17,38 +31,148 @@ class XiaohongshuAdapter extends PlatformAdapter {
       supportsImages: true,
       supportsTags: true,
       supportsCategory: false,
-      requiresCoverImage: true
+      requiresCoverImage: false
     };
   }
 
   transform(contentModel) {
-    // 小红书是纯文本 + emoji + 话题标签
-    // 将 Markdown 转为纯文本
-    let text = this.markdownToPlainText(contentModel.content || '');
-    
-    // 小红书正文限制1000字
+    const md = contentModel.content || '';
+    const topicEmoji = this.pickTopicEmoji(md);
+
+    // 转换为小红书风格文本
+    const lines = md.split('\n');
+    const result = [];
+    let bulletIdx = 0;
+    let sectionIdx = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+
+      // 跳过空行（保留单个空行作为段落分隔）
+      if (line.trim() === '') {
+        if (result.length > 0 && result[result.length - 1] !== '') {
+          result.push('');
+        }
+        continue;
+      }
+
+      // 去除水平线
+      if (/^---+$/.test(line.trim())) {
+        result.push('—————— ✂ ——————');
+        sectionIdx++;
+        continue;
+      }
+
+      // 标题处理
+      const headingMatch = line.match(/^(#{1,6})\s+(.+)/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const text = this.stripInline(line.substring(level + 1));
+        if (level <= 2) {
+          // 一级/二级标题 → 加粗 + emoji + 分隔
+          const secEmoji = SECTION_EMOJIS[sectionIdx % SECTION_EMOJIS.length];
+          result.push('');
+          result.push(`${secEmoji} 【${text}】`);
+        } else {
+          result.push(`▫️ ${text}`);
+        }
+        sectionIdx++;
+        continue;
+      }
+
+      // 有序列表
+      const orderedMatch = line.match(/^(\d+)\.\s+(.+)/);
+      if (orderedMatch) {
+        const text = this.stripInline(orderedMatch[2]);
+        const emoji = BULLET_EMOJIS[bulletIdx % BULLET_EMOJIS.length];
+        bulletIdx++;
+        result.push(`${emoji} ${text}`);
+        continue;
+      }
+
+      // 无序列表
+      const unorderedMatch = line.match(/^[\-\*]\s+(.+)/);
+      if (unorderedMatch) {
+        const text = this.stripInline(unorderedMatch[1]);
+        const emoji = BULLET_EMOJIS[bulletIdx % BULLET_EMOJIS.length];
+        bulletIdx++;
+        result.push(`${emoji} ${text}`);
+        continue;
+      }
+
+      // 引用
+      if (line.startsWith('> ')) {
+        const text = this.stripInline(line.substring(2));
+        result.push(`💬 ${text}`);
+        continue;
+      }
+
+      // 图片
+      if (line.match(/^!\[.*\]\(.+\)/)) {
+        continue; // 跳过图片
+      }
+
+      // 代码块区域（跳过）
+      if (line.trim().startsWith('```')) {
+        while (i + 1 < lines.length && !lines[i + 1].trim().startsWith('```')) i++;
+        i++; // 跳过结束 ```
+        continue;
+      }
+
+      // 普通行内代码
+      line = line.replace(/`(.+?)`/g, '$1');
+
+      // 普通段落：拆成长句为短段（小红书风格）
+      const plain = this.stripInline(line);
+      if (plain) {
+        // 拆分过长段落
+        const sentences = plain.split(/[。！？]/).filter(s => s.trim());
+        for (const s of sentences) {
+          const trimmed = s.trim();
+          if (trimmed) result.push(trimmed + '。');
+        }
+      }
+    }
+
+    let text = result.join('\n')
+      .replace(/\n{3,}/g, '\n\n')  // 最多两个连续换行
+      .trim();
+
+    // 1000字限制
     text = text.slice(0, 1000);
 
-    // 在小红书，话题标签以 #话题# 形式嵌入正文末尾
+    // 话题标签
     const hashtags = (contentModel.tags || []).map(t => `#${t}#`).join(' ');
-
-    // 如果有 hashtags，追加到正文末尾
     const fullText = hashtags ? `${text}\n\n${hashtags}` : text;
-    
-    // 标题限制20字
+
     const title = (contentModel.title || this.generateTitle(text)).slice(0, 20);
 
     return {
       title,
       content: fullText,
-      // 小红书是多图模式，封面即首图
       images: contentModel.coverImage ? [contentModel.coverImage] : [],
       tags: contentModel.tags || [],
-      // 小红书支持添加地点
       location: '',
-      // 笔记类型：图文笔记
       noteType: 'image-text'
     };
+  }
+
+  // 去除行内Markdown格式符号
+  stripInline(text) {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '$1')   // 粗体
+      .replace(/\*(.+?)\*/g, '$1')         // 斜体
+      .replace(/\[(.+?)\]\(.+?\)/g, '$1')  // 链接
+      .replace(/\n/g, '')
+      .trim();
+  }
+
+  // 根据内容关键词选择主题emoji
+  pickTopicEmoji(text) {
+    for (const [key, emoji] of Object.entries(TOPIC_EMOJIS)) {
+      if (text.includes(key)) return emoji;
+    }
+    return '📝';
   }
 
   getPublishInfo(contentModel) {
@@ -71,36 +195,8 @@ class XiaohongshuAdapter extends PlatformAdapter {
     };
   }
 
-  markdownToPlainText(markdown) {
-    return markdown
-      // 去除标题符号
-      .replace(/^#{1,6}\s+/gm, '')
-      // 粗体 -> 保留文本
-      .replace(/\*\*(.+?)\*\*/g, '$1')
-      // 斜体 -> emoji 风格表达
-      .replace(/\*(.+?)\*/g, '$1')
-      // 链接 -> 只保留文字
-      .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-      // 图片 -> 标记
-      .replace(/!\[.*?\]\(.+?\)/g, '📷')
-      // 代码块处理
-      .replace(/```[\s\S]*?```/g, '')
-      .replace(/`(.+?)`/g, '$1')
-      // 引用 -> 添加标记
-      .replace(/^>\s?/gm, '💬 ')
-      // 列表符号美化
-      .replace(/^[\-\*]\s/gm, '· ')
-      .replace(/^\d+\.\s/gm, '')
-      // 水平线
-      .replace(/^---$/gm, '——————')
-      // 清理多余空行
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-  }
-
   generateTitle(text) {
-    // 从小红书正文前20字生成标题
-    const clean = text.replace(/[#💬📷·]/g, '').trim();
+    const clean = text.replace(/[🔥📌💡⚡🔍🎯📢💬✨📝▫️·#\n]/g, '').trim();
     return clean.slice(0, 20) || '无标题笔记';
   }
 
@@ -139,9 +235,6 @@ class XiaohongshuAdapter extends PlatformAdapter {
     }
     if (adapted.content.length > 1000) {
       warnings.push(`小红书正文限制1000字，当前${adapted.content.length}字，已自动截断`);
-    }
-    if (!adapted.images || adapted.images.length === 0) {
-      warnings.push('小红书发布必须至少上传1张图片');
     }
     if (adapted.tags.length > 10) {
       warnings.push(`话题标签最多10个，当前${adapted.tags.length}个`);

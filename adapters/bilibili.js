@@ -18,22 +18,24 @@ class BilibiliAdapter extends PlatformAdapter {
       supportsImages: true,
       supportsTags: true,
       supportsCategory: true,
-      requiresCoverImage: true
+      requiresCoverImage: false
     };
   }
 
   transform(contentModel) {
-    const html = marked.parse(contentModel.content || '');
+    const content = contentModel.content || '';
+    const html = marked.parse(content);
 
     return {
       title: contentModel.title.slice(0, 100),
-      content: html,
-      rawText: contentModel.content,
+      content: content,             // 原始 Markdown（用于复制）
+      htmlContent: html,            // 渲染 HTML（用于预览）
+      rawText: content,
       coverImage: contentModel.coverImage || '',
       category: this.mapCategory(contentModel.category),
       tags: (contentModel.tags || []).slice(0, 10),
       original: 1,
-      summary: contentModel.summary || contentModel.content.replace(/[#*`>\-\n]/g, ' ').slice(0, 200)
+      summary: contentModel.summary || content.replace(/[#*`>\-\n]/g, ' ').slice(0, 200)
     };
   }
 
@@ -44,7 +46,7 @@ class BilibiliAdapter extends PlatformAdapter {
       editorUrl: 'https://member.bilibili.com/platform/upload/text',
       publisherUrl: 'https://member.bilibili.com/platform/home',
       hasRealApi: false,
-      copyTarget: 'html',
+      copyTarget: 'markdown',
       instructions: [
         '1. 链接会打开B站创作中心专栏编辑器',
         '2. 在编辑器中 Ctrl+V 粘贴已复制的富文本',
@@ -76,10 +78,6 @@ class BilibiliAdapter extends PlatformAdapter {
 
   renderPreview(adapted, original) {
     const warnings = this.validate(adapted);
-
-    if (!adapted.coverImage) {
-      warnings.push('B站专栏必须上传封面图（建议16:9比例）');
-    }
 
     return {
       platform: 'B站',
