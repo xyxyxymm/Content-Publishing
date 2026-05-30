@@ -19,7 +19,7 @@ class WechatAdapter extends PlatformAdapter {
       supportsImages: true,
       supportsTags: false,
       supportsCategory: false,
-      requiresCoverImage: true
+      requiresCoverImage: false
     };
   }
 
@@ -149,10 +149,6 @@ class WechatAdapter extends PlatformAdapter {
 
   renderPreview(adapted, original) {
     const warnings = this.validate(adapted);
-
-    if (!adapted.coverImage) {
-      warnings.push('建议添加封面图以提升阅读量（公众号强制要求）');
-    }
 
     return {
       platform: '微信公众号',
