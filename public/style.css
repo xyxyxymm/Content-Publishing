@@ -600,6 +600,7 @@ body {
   overflow: hidden;
   background: #fafbfc;
   transition: border-color 0.2s, background 0.2s;
+  position: relative;
 }
 
 .cover-dropzone:hover,
@@ -645,6 +646,43 @@ body {
 .cover-actions input:focus {
   outline: none;
   border-color: var(--primary-light);
+}
+
+.btn-cover-clear {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.btn-cover-clear:hover {
+  background: rgba(0,0,0,0.7);
+}
+
+.btn-cover-url-btn {
+  padding: 4px 10px;
+  border: 1.5px solid var(--border);
+  background: #fafbfc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: inherit;
+}
+.btn-cover-url-btn:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
 }
 
 /* ============= WeChat Config ============= */
