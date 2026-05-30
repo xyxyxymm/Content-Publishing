@@ -242,9 +242,8 @@
   function updatePublishButton() {
     if (state.selectedPlatforms.size > 0) {
       btnPublish.disabled = state.isPublishing;
-      if (state.publishMode === 'assisted') btnPublish.innerHTML = '🚀 辅助发布到 ' + state.selectedPlatforms.size + ' 个平台';
-      else if (state.publishMode === 'real') btnPublish.innerHTML = '🚀 真实API发布到 ' + state.selectedPlatforms.size + ' 个平台';
-      else btnPublish.innerHTML = '🚀 模拟发布到 ' + state.selectedPlatforms.size + ' 个平台';
+      if (state.publishMode === 'real') btnPublish.innerHTML = '🚀 真实API发布到 ' + state.selectedPlatforms.size + ' 个平台';
+      else btnPublish.innerHTML = '🚀 辅助发布到 ' + state.selectedPlatforms.size + ' 个平台';
     } else {
       btnPublish.disabled = true;
       btnPublish.innerHTML = '🚀 请先选择目标平台';
@@ -308,6 +307,7 @@
               apiPost('/api/publish', { platformIds: [info.platformId], title: cd.title, content: cd.content, summary: cd.summary, tags: cd.tags, category: cd.category, coverImage: cd.coverImage, author: cd.author }).catch(function () {});
             });
             loadHistory();
+            $('#history-body').style.display = 'block';
           }).catch(function () {
             showToast('已打开 ' + infos.length + ' 个编辑器，请手动复制内容后粘贴', 'success');
             publishStatus.textContent = '✅ 已打开编辑器，请手动 Ctrl+C 复制预览内容';
@@ -354,6 +354,7 @@
         }
         showToast('发布完成：' + success + ' 成功，' + failed.length + ' 失败', failed.length ? 'error' : 'success');
         loadHistory();
+        $('#history-body').style.display = 'block';
         state.isPublishing = false;
         btnPublish.disabled = false;
         updatePublishButton();
@@ -366,40 +367,6 @@
         btnPublish.disabled = false;
         updatePublishButton();
       });
-  }
-
-  // 模拟发布
-  function simulatePublish() {
-    if (state.selectedPlatforms.size === 0) { showToast('请先选择平台', 'error'); return; }
-    var cd = getContentData();
-    if (!cd.title || !cd.content) { showToast('请填写标题和正文', 'error'); return; }
-    state.isPublishing = true;
-    btnPublish.disabled = true;
-
-    var platformIds = Array.from(state.selectedPlatforms);
-    var total = platformIds.length;
-    function publishOne(i) {
-      if (i >= total) {
-        showToast('模拟发布完成！共 ' + total + ' 个平台', 'success');
-        publishStatus.textContent = '✅ 模拟发布完成 | ' + total + ' 个平台';
-        publishStatus.className = 'publish-status success';
-        btnPublish.innerHTML = '🚀 模拟发布到 ' + total + ' 个平台';
-        state.isPublishing = false;
-        btnPublish.disabled = false;
-        loadHistory();
-        return;
-      }
-      var pid = platformIds[i];
-      var pname = '';
-      for (var j = 0; j < state.platforms.length; j++) { if (state.platforms[j].id === pid) { pname = state.platforms[j].name; break; } }
-      btnPublish.innerHTML = '<span class="spinner"></span> 模拟发布到 ' + pname + ' (' + (i + 1) + '/' + total + ')...';
-      publishStatus.textContent = '⏳ ' + pname + ' 模拟发布中...';
-
-      apiPost('/api/publish', Object.assign({ platformIds: [pid] }, cd))
-        .then(function () { publishStatus.textContent = '✅ ' + pname + ' 模拟成功'; setTimeout(function () { publishOne(i + 1); }, 300); })
-        .catch(function (err) { publishStatus.textContent = '❌ ' + pname + ' 失败: ' + err.message; publishStatus.className = 'publish-status error'; setTimeout(function () { publishOne(i + 1); }, 500); });
-    }
-    publishOne(0);
   }
 
   // 一键复制全部内容
@@ -505,9 +472,8 @@
   function bindEvents() {
     btnPublish.addEventListener('click', function () {
       if (state.isPublishing) return;
-      if (state.publishMode === 'assisted') assistedPublish();
-      else if (state.publishMode === 'real') realApiPublish();
-      else simulatePublish();
+      if (state.publishMode === 'real') realApiPublish();
+      else assistedPublish();
     });
 
     btnCopyAll.addEventListener('click', copyAllContent);
@@ -516,6 +482,11 @@
       if (state.selectedPlatforms.size === 0) { showToast('请先选择目标平台', 'error'); return; }
       refreshPreviews();
       showToast('预览已刷新', 'success');
+    });
+
+    $('#btn-toggle-history').addEventListener('click', function () {
+      var body = $('#history-body');
+      body.style.display = body.style.display === 'none' ? 'block' : 'none';
     });
 
     $('#btn-clear-history').addEventListener('click', function () {

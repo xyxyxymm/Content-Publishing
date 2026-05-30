@@ -751,7 +751,28 @@ body {
   padding: 0 32px;
 }
 
-.history-section .panel-header {
+.history-toggle {
+  width: 100%;
+  text-align: left;
+  padding: 10px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.history-toggle:hover {
+  border-color: var(--primary-light);
+}
+
+.history-body {
+  margin-top: 8px;
+}
+
+.history-body .panel-header {
   border: 1px solid var(--border);
   border-bottom: none;
   border-radius: var(--radius) var(--radius) 0 0;
