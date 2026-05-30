@@ -19,7 +19,7 @@
 
       <div class="form-group">
         <label for="title">标题</label>
-        <input type="text" id="title" placeholder="输入文章标题" maxlength="100">
+        <input type="text" id="title" placeholder="" maxlength="100">
         <span class="char-count"><span id="title-count">0</span>/100</span>
       </div>
 
@@ -40,7 +40,7 @@
 
       <div class="form-group" id="summary-group" style="display:none">
         <label for="summary">摘要</label>
-        <textarea id="summary" rows="2" placeholder="简要描述文章内容..." maxlength="200"></textarea>
+        <textarea id="summary" rows="2" placeholder="" maxlength="200"></textarea>
         <span class="char-count"><span id="summary-count">0</span>/200</span>
       </div>
 
@@ -60,14 +60,9 @@
         </select>
       </div>
 
-      <div class="form-group" id="tags-group" style="display:none">
-        <label for="tags">标签</label>
-        <input type="text" id="tags" placeholder="AI, 科技, 效率工具">
-      </div>
-
       <div class="form-group">
         <label for="author">作者</label>
-        <input type="text" id="author" placeholder="作者名称">
+        <input type="text" id="author" placeholder="">
       </div>
 
       <div class="form-group">
@@ -84,19 +79,7 @@
             <button type="button" class="tb-btn" data-action="code" title="代码">〈/〉</button>
             <button type="button" class="tb-btn" data-action="hr" title="分割线">—</button>
           </div>
-          <textarea id="content" placeholder="在此编写 Markdown 内容...
-
-# 一级标题
-## 二级标题
-
-正文内容支持 **粗体**、*斜体*、[链接](url)、![图片](url)
-
-> 引用文字
-
-- 列表项1
-- 列表项2
-
-```代码块```"></textarea>
+          <textarea id="content" placeholder=""></textarea>
         </div>
         <span class="char-count"><span id="content-count">0</span> 字符</span>
       </div>
@@ -138,21 +121,15 @@
 
       <!-- 发布操作区 -->
       <div class="publish-bar">
-        <div class="publish-mode-tabs">
-          <button class="publish-mode-btn active" data-mode="assisted">辅助发布（推荐）</button>
-          <button class="publish-mode-btn" data-mode="real">真实API</button>
-        </div>
         <div class="publish-actions-row">
           <button id="btn-publish" class="btn btn-publish">
-            🚀 一键发布到所选平台
+            🚀 请先选择目标平台
           </button>
-          <button id="btn-copy-all" class="btn btn-primary btn-sm">📋 复制全部内容</button>
         </div>
-        <span class="publish-status" id="publish-status"></span>
       </div>
 
       <!-- 微信API配置 -->
-      <div class="wechat-config" id="wechat-config">
+      <div class="wechat-config" id="wechat-config" style="display:none">
         <button id="btn-toggle-wechat" class="btn btn-sm btn-outline">
           ⚙ 微信公众号 API 配置
         </button>
