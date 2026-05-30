@@ -52,7 +52,7 @@
     clearTimeout(toastTimer);
     toast.textContent = msg;
     toast.className = 'toast ' + (type || '') + ' show';
-    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 3000);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2700);
   }
 
   // ============= API =============
@@ -215,14 +215,12 @@
   }
 
   function renderBilibili(p) {
-    var cover = p.coverImage ? '<div class="bili-cover"><img src="' + escapeHtml(p.coverImage) + '" alt="封面" onerror="this.parentElement.innerHTML=\'封面图加载失败\'"></div>' : '<div class="bili-cover">📷 专栏封面（B站必填）</div>';
     var tags = p.tags && p.tags.length ? p.tags.map(function (t) { return '<span class="zhihu-tag">' + escapeHtml(t) + '</span>'; }).join('') : '';
-    return '<div class="preview-bilibili"><div class="preview-bili-header"><div class="bili-title">' + escapeHtml(p.title) + '</div><div class="bili-meta"><span>分类：' + (p.category ? escapeHtml(p.category.name) : '未设置') + '</span>' + (tags ? '<span>' + tags + '</span>' : '') + '</div></div>' + cover + '<div class="preview-bili-body">' + (p.content || '') + '</div></div>';
+    return '<div class="preview-bilibili"><div class="preview-bili-header"><div class="bili-title">' + escapeHtml(p.title) + '</div></div><div class="preview-bili-body">' + (p.content || '') + '</div></div>';
   }
 
   function renderXiaohongshu(p) {
-    var img = p.images && p.images.length ? '<div class="xhs-image"><img src="' + escapeHtml(p.images[0]) + '" alt="图片" onerror="this.parentElement.innerHTML=\'图片加载失败\'"></div>' : '<div class="xhs-image">📷 需要上传封面图<br><span style="font-size:10px;">小红书必传</span></div>';
-    return '<div class="preview-xiaohongshu">' + img + '<div class="xhs-body"><div class="xhs-title">' + escapeHtml(p.title) + '</div><div class="xhs-text">' + escapeHtml(p.body || '') + '</div><div class="xhs-hashtags">' + (p.hashtags ? escapeHtml(p.hashtags) : '') + '</div></div></div>';
+    return '<div class="preview-xiaohongshu"><div class="xhs-body"><div class="xhs-title">' + escapeHtml(p.title) + '</div><div class="xhs-text">' + escapeHtml(p.body || '') + '</div><div class="xhs-hashtags">' + (p.hashtags ? escapeHtml(p.hashtags) : '') + '</div></div></div>';
   }
 
   // ============= Publish =============
@@ -253,7 +251,7 @@
     if (categoryGroup) categoryGroup.style.display = 'none';
 
     var coverGroup = $('#cover-group');
-    if (coverGroup) coverGroup.style.display = (state.selectedPlatforms.has('zhihu') || state.selectedPlatforms.has('bilibili')) ? 'none' : 'block';
+    if (coverGroup) coverGroup.style.display = (state.selectedPlatforms.has('zhihu') || state.selectedPlatforms.has('bilibili') || state.selectedPlatforms.has('xiaohongshu')) ? 'none' : 'block';
 
     if (wechatConfig) {
       wechatConfig.style.display = state.selectedPlatforms.has('wechat') ? 'block' : 'none';
@@ -284,13 +282,13 @@
           } else if (info.copyTarget === 'markdown' && info.adaptedContent.content) {
             copyTexts.push({ platform: info.platformName, content: info.adaptedContent.content, type: 'text' });
           } else if (info.copyTarget === 'text' && info.adaptedContent.content) {
-            copyTexts.push({ platform: info.platformName, content: info.adaptedContent.content + '\n\n' + info.adaptedContent.title, type: 'text' });
+            copyTexts.push({ platform: info.platformName, content: info.adaptedContent.content, type: 'text' });
           }
         });
 
         var msg = '';
         if (copyTexts.length > 0) {
-          var allText = copyTexts.map(function (c) { return '--- ' + c.platform + ' ---\n' + c.content; }).join('\n\n\n');
+          var allText = copyTexts.map(function (c) { return c.content; }).join('\n\n\n');
           copyToClipboard(allText).then(function () {
             showToast('已打开 ' + infos.length + ' 个平台，内容已复制', 'success');
             infos.forEach(function (info) {

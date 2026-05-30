@@ -24,7 +24,10 @@ class WechatAdapter extends PlatformAdapter {
   }
 
   transform(contentModel) {
-    const html = marked.parse(contentModel.content || '');
+    const cleaned = this.cleanMarkdown(contentModel.content || '');
+    const rawHtml = marked.parse(cleaned);
+    const fixedHtml = this.fixLists(rawHtml);
+    const html = this.applyWechatStyles(fixedHtml);
     const summary = (contentModel.summary || this.extractSummary(contentModel.content)).slice(0, 120);
 
     return {
@@ -37,6 +40,88 @@ class WechatAdapter extends PlatformAdapter {
       sourceUrl: contentModel.originalUrl || '',
       rawText: contentModel.content
     };
+  }
+
+  // 清理Markdown：删除空列表项、重编有序列表序号
+  cleanMarkdown(md) {
+    const lines = md.split('\n');
+    const result = [];
+    let orderedCounter = 0;
+    let inOrderedList = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const orderedMatch = line.match(/^(\d+)\.\s+(.*)/);
+      const unorderedMatch = line.match(/^[\-\*]\s+(.*)/);
+
+      if (orderedMatch) {
+        const content = orderedMatch[2].trim();
+        if (!content) continue; // 跳过空列表项
+        inOrderedList = true;
+        orderedCounter++;
+        result.push(`${orderedCounter}. ${content}`);
+      } else if (unorderedMatch) {
+        const content = unorderedMatch[1].trim();
+        if (!content) continue;
+        inOrderedList = false;
+        orderedCounter = 0;
+        result.push(line);
+      } else {
+        // 非列表行
+        if (line.trim() === '') {
+          // 空行可能结束列表
+          if (inOrderedList && i + 1 < lines.length && /^\d+\.\s+/.test(lines[i + 1])) {
+            continue; // 列表间空行跳过，保持列表连续
+          }
+          inOrderedList = false;
+          orderedCounter = 0;
+        } else {
+          inOrderedList = false;
+          orderedCounter = 0;
+        }
+        result.push(line);
+      }
+    }
+    return result.join('\n');
+  }
+
+  // 修复marked输出：合并被空行拆散的连续有序列表，删除空<li>
+  fixLists(html) {
+    // 合并相邻的 <ol> 列表
+    html = html.replace(/<\/ol>\s*<ol(\s[^>]*)?>/g, '');
+    // 删除空的 <li></li> 或只有空白符的
+    html = html.replace(/<li(\s[^>]*)?>\s*<\/li>/g, '');
+    return html;
+  }
+  applyWechatStyles(html) {
+    return html
+      // 标题
+      .replace(/<h1>/g, '<h1 style="font-size:22px;font-weight:bold;margin:1em 0 0.5em;line-height:1.6;">')
+      .replace(/<h2>/g, '<h2 style="font-size:18px;font-weight:bold;margin:0.8em 0 0.4em;line-height:1.6;">')
+      .replace(/<h3>/g, '<h3 style="font-size:16px;font-weight:bold;margin:0.6em 0 0.3em;line-height:1.6;">')
+      .replace(/<h4>/g, '<h4 style="font-size:15px;font-weight:bold;margin:0.5em 0 0.2em;line-height:1.6;">')
+      // 段落（先处理，确保包裹文本的 <p> 都被样式化）
+      .replace(/<p>/g, '<p style="font-size:16px;line-height:1.8;margin:0.5em 0;">')
+      // 代码块：先保护 <pre><code> 内部的 <code> 不被单独样式化
+      .replace(/<pre><code>/g, '<pre style="background:#282c34;color:#abb2bf;padding:14px 18px;border-radius:6px;margin:0.8em 0;overflow-x:auto;font-size:14px;line-height:1.7;white-space:pre-wrap;"><code>')
+      // 行内代码（不会匹配 <pre> 内的，因为前面已经替换掉了）
+      .replace(/<code>/g, '<code style="background:#f1f1f1;padding:2px 6px;border-radius:3px;font-size:0.9em;color:#c7254e;">')
+      // 引用
+      .replace(/<blockquote>/g, '<blockquote style="border-left:4px solid #1aad19;padding:10px 16px;margin:0.8em 0;background:#f5faf5;">')
+      // 列表
+      .replace(/<ul>/g, '<ul style="padding-left:1.5em;margin:0.6em 0;">')
+      .replace(/<ol>/g, '<ol style="padding-left:1.5em;margin:0.6em 0;">')
+      .replace(/<li>/g, '<li style="font-size:16px;line-height:1.8;margin:0.3em 0;">')
+      // 图片
+      .replace(/<img /g, '<img style="max-width:100%;display:block;margin:0.8em auto;border-radius:4px;" ')
+      // 链接
+      .replace(/<a /g, '<a style="color:#576b95;" ')
+      // 水平线
+      .replace(/<hr>/g, '<hr style="border:none;border-top:1px solid #e0e0e0;margin:1em 0;" />')
+      // 表格
+      .replace(/<table>/g, '<table style="width:100%;border-collapse:collapse;margin:0.8em 0;font-size:15px;">')
+      .replace(/<th>/g, '<th style="padding:8px 12px;border:1px solid #ddd;background:#f5f5f5;font-weight:bold;">')
+      .replace(/<td>/g, '<td style="padding:8px 12px;border:1px solid #ddd;">');
   }
 
   getPublishInfo(contentModel) {
