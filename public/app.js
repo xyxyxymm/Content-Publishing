@@ -257,6 +257,9 @@
     var coverGroup = $('#cover-group');
     if (coverGroup) coverGroup.style.display = (state.selectedPlatforms.has('zhihu') || state.selectedPlatforms.has('bilibili') || state.selectedPlatforms.has('xiaohongshu')) ? 'none' : 'block';
 
+    var authorGroup = $('#author-group');
+    if (authorGroup) authorGroup.style.display = state.selectedPlatforms.has('wechat') ? 'block' : 'none';
+
     if (wechatConfig) {
       wechatConfig.style.display = state.selectedPlatforms.has('wechat') ? 'block' : 'none';
     }

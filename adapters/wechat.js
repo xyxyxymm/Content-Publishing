@@ -95,33 +95,33 @@ class WechatAdapter extends PlatformAdapter {
   }
   applyWechatStyles(html) {
     return html
-      // 标题
-      .replace(/<h1>/g, '<h1 style="font-size:22px;font-weight:bold;margin:1em 0 0.5em;line-height:1.6;">')
-      .replace(/<h2>/g, '<h2 style="font-size:18px;font-weight:bold;margin:0.8em 0 0.4em;line-height:1.6;">')
-      .replace(/<h3>/g, '<h3 style="font-size:16px;font-weight:bold;margin:0.6em 0 0.3em;line-height:1.6;">')
-      .replace(/<h4>/g, '<h4 style="font-size:15px;font-weight:bold;margin:0.5em 0 0.2em;line-height:1.6;">')
-      // 段落（先处理，确保包裹文本的 <p> 都被样式化）
-      .replace(/<p>/g, '<p style="font-size:16px;line-height:1.8;margin:0.5em 0;">')
-      // 代码块：先保护 <pre><code> 内部的 <code> 不被单独样式化
-      .replace(/<pre><code>/g, '<pre style="background:#282c34;color:#abb2bf;padding:14px 18px;border-radius:6px;margin:0.8em 0;overflow-x:auto;font-size:14px;line-height:1.7;white-space:pre-wrap;"><code>')
-      // 行内代码（不会匹配 <pre> 内的，因为前面已经替换掉了）
-      .replace(/<code>/g, '<code style="background:#f1f1f1;padding:2px 6px;border-radius:3px;font-size:0.9em;color:#c7254e;">')
-      // 引用
-      .replace(/<blockquote>/g, '<blockquote style="border-left:4px solid #1aad19;padding:10px 16px;margin:0.8em 0;background:#f5faf5;">')
-      // 列表
-      .replace(/<ul>/g, '<ul style="padding-left:1.5em;margin:0.6em 0;">')
-      .replace(/<ol>/g, '<ol style="padding-left:1.5em;margin:0.6em 0;">')
-      .replace(/<li>/g, '<li style="font-size:16px;line-height:1.8;margin:0.3em 0;">')
-      // 图片
-      .replace(/<img /g, '<img style="max-width:100%;display:block;margin:0.8em auto;border-radius:4px;" ')
-      // 链接
-      .replace(/<a /g, '<a style="color:#576b95;" ')
-      // 水平线
-      .replace(/<hr>/g, '<hr style="border:none;border-top:1px solid #e0e0e0;margin:1em 0;" />')
-      // 表格
-      .replace(/<table>/g, '<table style="width:100%;border-collapse:collapse;margin:0.8em 0;font-size:15px;">')
-      .replace(/<th>/g, '<th style="padding:8px 12px;border:1px solid #ddd;background:#f5f5f5;font-weight:bold;">')
-      .replace(/<td>/g, '<td style="padding:8px 12px;border:1px solid #ddd;">');
+      // === 标题 ===
+      .replace(/<h1>/g, '<h1 style="font-size:22px;font-weight:bold;margin:1.4em 0 0.6em;line-height:1.5;letter-spacing:0.5px;">')
+      .replace(/<h2>/g, '<h2 style="font-size:19px;font-weight:bold;margin:1.3em 0 0.5em;line-height:1.5;">')
+      .replace(/<h3>/g, '<h3 style="font-size:17px;font-weight:bold;margin:1.2em 0 0.4em;line-height:1.5;">')
+      .replace(/<h4>/g, '<h4 style="font-size:16px;font-weight:bold;margin:1em 0 0.3em;line-height:1.5;">')
+      // === 段落 ===
+      .replace(/<p>/g, '<p style="font-size:16px;line-height:1.8;margin:0.6em 0;color:#3f3f3f;letter-spacing:0.5px;word-break:break-all;">')
+      // === 代码块（先处理 <pre><code> 防止内部 <code> 被单独替换）===
+      .replace(/<pre><code>/g, '<pre style="background:#282c34;color:#abb2bf;padding:14px 18px;border-radius:6px;margin:1em 0;overflow-x:auto;font-size:14px;line-height:1.7;white-space:pre-wrap;font-family:Menlo,Consolas,monospace;"><code>')
+      // === 行内代码 ===
+      .replace(/<code>/g, '<code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:0.88em;color:#c7254e;font-family:Menlo,Consolas,monospace;word-break:break-all;">')
+      // === 引用 ===
+      .replace(/<blockquote>/g, '<blockquote style="border-left:4px solid #1aad19;padding:10px 18px;margin:1em 0;background:#f6fdf6;font-size:15px;line-height:1.7;color:#555;">')
+      // === 列表（微信重置 ul/ol，必须加强内联样式）===
+      .replace(/<ul>/g, '<ul style="padding-left:1.8em;margin:0.8em 0;list-style-type:disc;list-style-position:outside;">')
+      .replace(/<ol>/g, '<ol style="padding-left:1.8em;margin:0.8em 0;list-style-type:decimal;list-style-position:outside;">')
+      .replace(/<li>/g, '<li style="font-size:16px;line-height:1.8;margin:0.4em 0;color:#3f3f3f;">')
+      // === 图片 ===
+      .replace(/<img /g, '<img style="max-width:100%;height:auto;display:block;margin:1em auto;border-radius:4px;" ')
+      // === 链接 ===
+      .replace(/<a /g, '<a style="color:#576b95;text-decoration:none;border-bottom:1px solid #576b95;" ')
+      // === 水平线 ===
+      .replace(/<hr>/g, '<hr style="border:none;border-top:1px solid #e0e0e0;margin:1.5em 0;" />')
+      // === 表格 ===
+      .replace(/<table>/g, '<table style="width:100%;border-collapse:collapse;margin:1em 0;font-size:15px;border:1px solid #e0e0e0;">')
+      .replace(/<th>/g, '<th style="padding:10px 14px;border:1px solid #ddd;background:#f5f5f5;font-weight:bold;text-align:left;">')
+      .replace(/<td>/g, '<td style="padding:10px 14px;border:1px solid #ddd;">');
   }
 
   getPublishInfo(contentModel) {
