@@ -7,7 +7,7 @@
 
   var titleInput, coverInput, summaryInput, categorySelect, tagsInput, authorInput;
   var contentInput, platformSelector, previewTabs, previewContent;
-  var btnPublish, btnCopyAll, publishStatus, historyList, toast;
+  var btnPublish, publishStatus, historyList, toast;
   var wechatConfig, wechatAppid, wechatSecret, wechatStatus;
   var coverDropzone, coverPreview, coverDataInput, btnCoverClear;
 
@@ -16,8 +16,7 @@
     selectedPlatforms: new Set(),
     currentTab: null,
     previewData: {},
-    isPublishing: false,
-    publishMode: 'assisted'
+    isPublishing: false
   };
 
   // ============= Init =============
@@ -37,7 +36,6 @@
     previewTabs = $('#preview-tabs');
     previewContent = $('#preview-content');
     btnPublish = $('#btn-publish');
-    btnCopyAll = $('#btn-copy-all');
     publishStatus = $('#publish-status');
     historyList = $('#history-list');
     toast = $('#toast');
@@ -91,7 +89,7 @@
 
   // ============= Content =============
   function getContentData() {
-    var tags = (tagsInput.value || '').split(/[,，]/).map(function (t) { return t.trim(); }).filter(Boolean);
+    var tags = tagsInput ? (tagsInput.value || '').split(/[,，]/).map(function (t) { return t.trim(); }).filter(Boolean) : [];
     var rawCover = (coverDataInput.value || coverInput.value || '').trim();
     // 预览时 base64 太长会拖慢请求，只传标记；发布时才传完整数据
     var isDataUrl = rawCover.startsWith('data:');
@@ -137,6 +135,9 @@
           state.selectedPlatforms.delete(pid);
           chip.classList.remove('active');
         } else {
+          // 单选：先清除所有，再选中当前
+          state.selectedPlatforms.clear();
+          platformSelector.querySelectorAll('.platform-chip').forEach(function (c) { c.classList.remove('active'); });
           state.selectedPlatforms.add(pid);
           chip.classList.add('active');
         }
@@ -153,33 +154,20 @@
     var active = Array.from(state.selectedPlatforms);
     if (active.length === 0) {
       previewTabs.innerHTML = '';
-      previewContent.innerHTML = '<div class="preview-placeholder"><div class="placeholder-icon">📝</div><p>选择上方平台查看格式适配效果</p></div>';
+      previewContent.innerHTML = '<div class="preview-placeholder"><div class="placeholder-icon">📝</div><p>选择一个平台查看格式适配效果</p></div>';
       state.currentTab = null;
       return;
     }
-    previewTabs.innerHTML = state.platforms.filter(function (p) { return active.indexOf(p.id) !== -1; }).map(function (p, i) {
-      var warns = state.previewData[p.id] && state.previewData[p.id].warnings;
-      var badge = warns && warns.length ? '<span class="badge warn">' + warns.length + '</span>' : (state.previewData[p.id] ? '<span class="badge ok">✓</span>' : '');
-      return '<button class="preview-tab' + (i === 0 ? ' active' : '') + '" data-platform="' + p.id + '">' + p.name + ' ' + badge + '</button>';
-    }).join('');
 
-    if (!state.currentTab || active.indexOf(state.currentTab) === -1) state.currentTab = active[0];
-
-    previewTabs.querySelectorAll('.preview-tab').forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        previewTabs.querySelectorAll('.preview-tab').forEach(function (t) { t.classList.remove('active'); });
-        tab.classList.add('active');
-        state.currentTab = tab.dataset.platform;
-        showPreviewPane(state.currentTab);
-      });
-    });
+    state.currentTab = active[0];
+    // 单选：不显示页签，直接展示预览
+    previewTabs.innerHTML = '';
     showPreviewPane(state.currentTab);
   }
 
   function refreshPreviews() {
     if (state.selectedPlatforms.size === 0) return;
     var cd = getContentData();
-    if (!cd.content && !cd.title) return;
     var ids = Array.from(state.selectedPlatforms);
     ids.forEach(function (pid, i) {
       apiPost('/api/preview', Object.assign({ platformId: pid }, cd)).then(function (data) {
@@ -241,8 +229,13 @@
   function updatePublishButton() {
     if (state.selectedPlatforms.size > 0) {
       btnPublish.disabled = state.isPublishing;
-      if (state.publishMode === 'real') btnPublish.innerHTML = '🚀 真实API发布到 ' + state.selectedPlatforms.size + ' 个平台';
-      else btnPublish.innerHTML = '🚀 辅助发布到 ' + state.selectedPlatforms.size + ' 个平台';
+      var pid = Array.from(state.selectedPlatforms)[0];
+      var pname = '';
+      for (var i = 0; i < state.platforms.length; i++) {
+        if (state.platforms[i].id === pid) { pname = state.platforms[i].name; break; }
+      }
+      if (pid === 'wechat') btnPublish.innerHTML = '🚀 真实API发布到 ' + pname;
+      else btnPublish.innerHTML = '🚀 辅助发布到 ' + pname;
     } else {
       btnPublish.disabled = true;
       btnPublish.innerHTML = '🚀 请先选择目标平台';
@@ -258,6 +251,10 @@
 
     var categoryGroup = $('#category-group');
     if (categoryGroup) categoryGroup.style.display = state.selectedPlatforms.has('bilibili') ? 'block' : 'none';
+
+    if (wechatConfig) {
+      wechatConfig.style.display = state.selectedPlatforms.has('wechat') ? 'block' : 'none';
+    }
   }
 
   // 辅助发布：打开平台编辑器 + 复制内容
@@ -348,29 +345,6 @@
   }
 
   // 一键复制全部内容
-  function copyAllContent() {
-    var cd = getContentData();
-    if (!cd.content) { showToast('请输入正文内容', 'error'); return; }
-    var ids = Array.from(state.selectedPlatforms);
-    if (ids.length === 0) { ids = state.platforms.map(function (p) { return p.id; }); }
-
-    apiPost('/api/transform', Object.assign({ platformId: 'all' }, cd))
-      .then(function (result) {
-        var texts = [];
-        for (var pid in result) {
-          if (result.hasOwnProperty(pid)) {
-            var pname = '';
-            for (var k = 0; k < state.platforms.length; k++) { if (state.platforms[k].id === pid) { pname = state.platforms[k].name; break; } }
-            texts.push('--- ' + pname + ' ---\n' + (result[pid].content || ''));
-          }
-        }
-        copyToClipboard(texts.join('\n\n\n')).then(function () {
-          showToast('已复制全部平台适配内容到剪贴板', 'success');
-        });
-      })
-      .catch(function (err) { showToast('转换失败: ' + err.message, 'error'); });
-  }
-
   // 剪贴板工具
   function copyToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -409,26 +383,19 @@
   }
 
   // ============= Mode Switch =============
-  function bindModeTabs() {
-    $$('.publish-mode-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        $$('.publish-mode-btn').forEach(function (b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        state.publishMode = btn.dataset.mode;
-        updatePublishButton();
-      });
-    });
-
-    // 微信配置面板的展开/收起
+  // ============= WeChat Config Toggle =============
+  function bindWechatToggle() {
     var wechatToggleBtn = $('#btn-toggle-wechat');
     var configBody = $('#config-body');
-    wechatToggleBtn.addEventListener('click', function () {
-      if (configBody.style.display === 'none') {
-        configBody.style.display = 'block';
-      } else {
-        configBody.style.display = 'none';
-      }
-    });
+    if (wechatToggleBtn) {
+      wechatToggleBtn.addEventListener('click', function () {
+        if (configBody.style.display === 'none') {
+          configBody.style.display = 'block';
+        } else {
+          configBody.style.display = 'none';
+        }
+      });
+    }
   }
 
   // ============= WeChat Config =============
@@ -450,11 +417,10 @@
   function bindEvents() {
     btnPublish.addEventListener('click', function () {
       if (state.isPublishing) return;
-      if (state.publishMode === 'real') realApiPublish();
+      var pid = state.selectedPlatforms.size > 0 ? Array.from(state.selectedPlatforms)[0] : '';
+      if (pid === 'wechat') realApiPublish();
       else assistedPublish();
     });
-
-    btnCopyAll.addEventListener('click', copyAllContent);
 
     $('#btn-preview-all').addEventListener('click', function () {
       if (state.selectedPlatforms.size === 0) { showToast('请先选择目标平台', 'error'); return; }
@@ -491,7 +457,14 @@
 
     titleInput.addEventListener('input', function () { $('#title-count').textContent = titleInput.value.length; });
     summaryInput.addEventListener('input', function () { $('#summary-count').textContent = summaryInput.value.length; });
-    contentInput.addEventListener('input', function () { $('#content-count').textContent = contentInput.value.length; });
+    var previewTimer;
+    contentInput.addEventListener('input', function () {
+      $('#content-count').textContent = contentInput.value.length;
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(function () {
+        if (state.selectedPlatforms.size > 0) refreshPreviews();
+      }, 300);
+    });
 
     contentInput.addEventListener('paste', function (e) {
       e.preventDefault();
@@ -602,7 +575,7 @@
   // ============= Start =============
   function init() {
     initDom();
-    bindModeTabs();
+    bindWechatToggle();
     checkWechatStatus();
 
     apiGet('/api/platforms').then(function (platforms) {
@@ -613,7 +586,7 @@
       updatePublishButton();
       updateSummaryVisibility();
       loadHistory();
-      console.log('[发布工具] 初始化完成。当前模式: ' + state.publishMode);
+      console.log('[发布工具] 初始化完成');
     }).catch(function (err) {
       console.error('[发布工具] 加载平台失败:', err);
       showToast('无法连接后端服务，请运行 npm start', 'error');
