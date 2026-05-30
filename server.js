@@ -169,18 +169,9 @@ app.post('/api/publish-real', async (req, res) => {
           });
         }
       } else {
-        // 非微信平台：没有真实API，返回编辑器链接+辅助发布
-        const adapter = registry.getAdapter(pid);
-        const info = adapter.getPublishInfo(contentModel);
-        results.push({
-          platformId: pid,
-          platformName: info.platformName,
-          status: 'assisted',
-          publishedAt: new Date().toISOString(),
-          platformUrl: info.editorUrl,
-          isReal: false,
-          message: '该平台不支持API直发，已返回编辑器链接，请手动粘贴发布'
-        });
+        // 非微信或无配置的平台，使用模拟发布
+        const result = await mockPublisher.publishMulti([pid], contentModel);
+        results.push(...result);
       }
     }
 

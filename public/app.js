@@ -132,6 +132,7 @@
     }
     platformSelector.querySelectorAll('.platform-chip').forEach(function (chip) {
       var pid = chip.dataset.platform;
+      if (chip.classList.contains('active')) state.selectedPlatforms.add(pid);
       chip.addEventListener('click', function () {
         if (state.selectedPlatforms.has(pid)) {
           state.selectedPlatforms.delete(pid);
@@ -268,17 +269,23 @@
 
     state.isPublishing = true;
     btnPublish.disabled = true;
+    publishStatus.textContent = '';
+    publishStatus.className = 'publish-status';
 
     apiPost('/api/publish-info', { platformIds: Array.from(state.selectedPlatforms), title: cd.title, content: cd.content, summary: cd.summary, tags: cd.tags, category: cd.category, coverImage: cd.coverImage, author: cd.author })
       .then(function (infos) {
+        publishStatus.textContent = '⏳ 正在打开平台编辑器...';
+        // 收集复制内容和打开的标签页
         var copyTexts = [];
         infos.forEach(function (info, i) {
+          // 延迟打开，避免浏览器拦截弹窗
           setTimeout(function () {
             if (info.canOpenEditor && info.editorUrl) {
               window.open(info.editorUrl, '_blank');
             }
           }, i * 300);
 
+          // 收集要复制的内容
           if (info.copyTarget === 'html' && info.adaptedContent.content) {
             copyTexts.push({ platform: info.platformName, content: info.adaptedContent.content, type: 'html' });
           } else if (info.copyTarget === 'markdown' && info.adaptedContent.content) {
@@ -288,11 +295,14 @@
           }
         });
 
-        var msg = '';
         if (copyTexts.length > 0) {
+          // 平面文本复制（兼容所有浏览器）
           var allText = copyTexts.map(function (c) { return '--- ' + c.platform + ' ---\n' + c.content; }).join('\n\n\n');
           copyToClipboard(allText).then(function () {
-            showToast('已打开 ' + infos.length + ' 个平台，内容已复制', 'success');
+            showToast('已复制 ' + copyTexts.length + ' 个平台的适配内容到剪贴板', 'success');
+            publishStatus.textContent = '✅ 已打开 ' + infos.length + ' 个平台编辑器，内容已复制。请在各平台 Ctrl+V 粘贴发布';
+            publishStatus.className = 'publish-status success';
+            // 保存模拟记录
             infos.forEach(function (info) {
               apiPost('/api/publish', { platformIds: [info.platformId], title: cd.title, content: cd.content, summary: cd.summary, tags: cd.tags, category: cd.category, coverImage: cd.coverImage, author: cd.author }).catch(function () {});
             });
@@ -300,6 +310,8 @@
             $('#history-body').style.display = 'block';
           }).catch(function () {
             showToast('已打开 ' + infos.length + ' 个编辑器，请手动复制内容后粘贴', 'success');
+            publishStatus.textContent = '✅ 已打开编辑器，请手动 Ctrl+C 复制预览内容';
+            publishStatus.className = 'publish-status success';
           });
         }
         state.isPublishing = false;
@@ -321,18 +333,26 @@
     if (!cd.title || !cd.content) { showToast('请填写标题和正文', 'error'); return; }
     state.isPublishing = true;
     btnPublish.disabled = true;
-    publishStatus.textContent = '';
+    publishStatus.textContent = '⏳ 真实API发布中...';
     publishStatus.className = 'publish-status';
 
     apiPost('/api/publish-real', { platformIds: Array.from(state.selectedPlatforms), title: cd.title, content: cd.content, summary: cd.summary, tags: cd.tags, category: cd.category, coverImage: cd.coverImage, author: cd.author })
       .then(function (results) {
+        var success = results.filter(function (r) { return r.status === 'published'; }).length;
         var failed = results.filter(function (r) { return r.status === 'failed'; });
+        var real = results.filter(function (r) { return r.isReal; });
 
         if (failed.length > 0) {
-          showToast('发布失败: ' + failed.map(function (f) { return f.platformName + ': ' + f.error; }).join('; '), 'error');
+          publishStatus.textContent = '⚠ 部分发布失败: ' + failed.map(function (f) { return f.platformName + ': ' + f.error; }).join('; ');
+          publishStatus.className = 'publish-status error';
+        } else if (real.length > 0) {
+          publishStatus.textContent = '✅ 真实API发布成功！' + real.map(function (r) { return r.platformName + '草稿已创建'; }).join(', ');
+          publishStatus.className = 'publish-status success';
         } else {
-          showToast('发布完成', 'success');
+          publishStatus.textContent = '✅ 发布完成 | ' + success + '/' + results.length + ' 个平台';
+          publishStatus.className = 'publish-status success';
         }
+        showToast('发布完成：' + success + ' 成功，' + failed.length + ' 失败', failed.length ? 'error' : 'success');
         loadHistory();
         $('#history-body').style.display = 'block';
         state.isPublishing = false;
@@ -341,6 +361,8 @@
       })
       .catch(function (err) {
         showToast('发布失败: ' + err.message, 'error');
+        publishStatus.textContent = '❌ 发布失败: ' + err.message;
+        publishStatus.className = 'publish-status error';
         state.isPublishing = false;
         btnPublish.disabled = false;
         updatePublishButton();
@@ -401,7 +423,7 @@
       historyList.innerHTML = history.map(function (item) {
         return '<div class="history-item"><div class="history-platform"><span class="history-dot ' + item.platformId + '"></span><span>' + item.platformName + '</span></div>' +
           '<span class="history-title">' + escapeHtml(item.title) + '</span>' +
-          '<div class="history-meta"><span class="history-status published">' + (item.isReal ? '真实发布' : (item.status === 'assisted' ? '辅助发布' : '已发布')) + '</span>' +
+          '<div class="history-meta"><span class="history-status published">' + (item.isReal ? '真实发布' : '已发布') + '</span>' +
           '<a class="history-url" href="' + item.platformUrl + '" target="_blank">🔗 打开</a>' +
           '<span>' + new Date(item.publishedAt).toLocaleString('zh-CN') + '</span></div></div>';
       }).join('');
