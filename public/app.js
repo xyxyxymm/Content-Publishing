@@ -250,7 +250,10 @@
     if (tagsGroup) tagsGroup.style.display = (state.selectedPlatforms.has('zhihu') || state.selectedPlatforms.has('xiaohongshu')) ? 'block' : 'none';
 
     var categoryGroup = $('#category-group');
-    if (categoryGroup) categoryGroup.style.display = state.selectedPlatforms.has('bilibili') ? 'block' : 'none';
+    if (categoryGroup) categoryGroup.style.display = 'none';
+
+    var coverGroup = $('#cover-group');
+    if (coverGroup) coverGroup.style.display = (state.selectedPlatforms.has('zhihu') || state.selectedPlatforms.has('bilibili')) ? 'none' : 'block';
 
     if (wechatConfig) {
       wechatConfig.style.display = state.selectedPlatforms.has('wechat') ? 'block' : 'none';
@@ -318,8 +321,6 @@
     if (!cd.title || !cd.content) { showToast('请填写标题和正文', 'error'); return; }
     state.isPublishing = true;
     btnPublish.disabled = true;
-    publishStatus.textContent = '';
-    publishStatus.className = 'publish-status';
 
     apiPost('/api/publish-real', { platformIds: Array.from(state.selectedPlatforms), title: cd.title, content: cd.content, summary: cd.summary, tags: cd.tags, category: cd.category, coverImage: cd.coverImage, author: cd.author })
       .then(function (results) {
@@ -376,7 +377,6 @@
         return '<div class="history-item"><div class="history-platform"><span class="history-dot ' + item.platformId + '"></span><span>' + item.platformName + '</span></div>' +
           '<span class="history-title">' + escapeHtml(item.title) + '</span>' +
           '<div class="history-meta"><span class="history-status published">' + (item.isReal ? '真实发布' : (item.status === 'assisted' ? '辅助发布' : '已发布')) + '</span>' +
-          '<a class="history-url" href="' + item.platformUrl + '" target="_blank">🔗 打开</a>' +
           '<span>' + new Date(item.publishedAt).toLocaleString('zh-CN') + '</span></div></div>';
       }).join('');
     }).catch(function (err) { historyList.innerHTML = '<p class="empty-hint" style="color:#d63031;">加载失败</p>'; });
@@ -509,16 +509,43 @@
       if (file && file.type.indexOf('image') !== -1) handleCoverFile(file);
     });
 
-    btnCoverClear.addEventListener('click', function () {
+    btnCoverClear.addEventListener('click', function (e) {
+      e.stopPropagation();
       coverDataInput.value = '';
       coverInput.value = '';
+      coverInput.style.display = 'none';
+      $('#btn-cover-url').style.display = '';
       coverPreview.style.display = 'none';
       coverPreview.src = '';
       coverDropzone.classList.remove('has-image');
       btnCoverClear.style.display = 'none';
     });
 
-    // URL 输入变化时也更新预览
+    // 图片URL按钮：点击切换输入框显示/隐藏
+    var btnCoverUrl = $('#btn-cover-url');
+    btnCoverUrl.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (coverInput.style.display === 'none') {
+        coverInput.style.display = '';
+        coverInput.focus();
+      } else {
+        coverInput.style.display = 'none';
+      }
+    });
+
+    // URL 输入变化时更新预览
+    coverInput.addEventListener('input', function () {
+      var url = coverInput.value.trim();
+      if (url && url.startsWith('http')) {
+        coverPreview.src = url;
+        coverPreview.style.display = 'block';
+        coverDropzone.classList.add('has-image');
+        btnCoverClear.style.display = 'block';
+        coverDataInput.value = '';
+      }
+    });
+
+    // URL 输入变化时更新预览
     coverInput.addEventListener('input', function () {
       var url = coverInput.value.trim();
       if (url && url.startsWith('http')) {

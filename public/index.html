@@ -9,13 +9,13 @@
 <body>
   <header class="app-header">
     <h1>多平台内容发布工具</h1>
-    <span class="subtitle">一次编辑 · 多平台适配 · 一键发布</span>
+    <span class="subtitle">一次编辑 · 多平台适配</span>
   </header>
 
   <div class="main-container">
     <!-- 左侧编辑区 -->
     <section class="editor-panel">
-      <div class="panel-header">内容编辑</div>
+      <div class="panel-header">编辑</div>
 
       <div class="form-group">
         <label for="title">标题</label>
@@ -23,16 +23,17 @@
         <span class="char-count"><span id="title-count">0</span>/100</span>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" id="cover-group">
         <label>封面</label>
         <div class="cover-upload" id="cover-upload">
           <div class="cover-dropzone" id="cover-dropzone">
             <span class="cover-placeholder">📷 点击或 Ctrl+V 粘贴图片</span>
             <img class="cover-preview" id="cover-preview" style="display:none" alt="">
+            <button type="button" id="btn-cover-clear" class="btn-cover-clear" style="display:none" title="清除封面">✕</button>
           </div>
           <div class="cover-actions">
-            <input type="text" id="coverImage" placeholder="或输入图片URL：https://...">
-            <button type="button" id="btn-cover-clear" class="btn btn-sm btn-outline" style="display:none">清除</button>
+            <button type="button" id="btn-cover-url" class="btn-cover-url-btn">输入图片URL</button>
+            <input type="text" id="coverImage" placeholder="https://..." style="display:none">
           </div>
         </div>
         <input type="hidden" id="cover-data" value="">
@@ -88,7 +89,7 @@
     <!-- 右侧预览+发布区 -->
     <section class="preview-panel">
       <div class="panel-header">
-        <span>多平台预览</span>
+        <span>预览</span>
         <div class="panel-actions">
           <button id="btn-preview-all" class="btn btn-primary btn-sm">刷新预览</button>
         </div>
