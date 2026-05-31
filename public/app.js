@@ -53,7 +53,7 @@
     clearTimeout(toastTimer);
     toast.textContent = msg;
     toast.className = 'toast ' + (type || '') + ' show';
-    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2700);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 4500);
   }
 
   // ============= API =============
@@ -174,6 +174,10 @@
       apiPost('/api/preview', Object.assign({ platformId: pid }, cd)).then(function (data) {
         state.previewData[pid] = data;
         updatePreviewTabs();
+        // 有警告时弹toast提醒
+        if (data.warnings && data.warnings.length > 0) {
+          showToast('⚠ ' + data.platform + ': ' + data.warnings[0], 'error');
+        }
       }).catch(function (err) {
         state.previewData[pid] = { error: err.message, platform: pid, platformId: pid };
         updatePreviewTabs();
@@ -270,6 +274,7 @@
     if (state.selectedPlatforms.size === 0) { showToast('请先选择平台', 'error'); return; }
     var cd = getContentData();
     if (!cd.title || !cd.content) { showToast('请填写标题和正文', 'error'); return; }
+    if (checkLimitsBlock()) return;
 
     state.isPublishing = true;
     btnPublish.disabled = true;
@@ -285,11 +290,11 @@
           }, i * 300);
 
           if (info.copyTarget === 'html' && info.adaptedContent.content) {
-            copyTexts.push({ platform: info.platformName, content: info.adaptedContent.content, type: 'html' });
+            copyTexts.push({ platform: info.platformName, content: '<h2>' + info.adaptedContent.title + '</h2>\n' + info.adaptedContent.content, type: 'html' });
           } else if (info.copyTarget === 'markdown' && info.adaptedContent.content) {
-            copyTexts.push({ platform: info.platformName, content: info.adaptedContent.content, type: 'text' });
+            copyTexts.push({ platform: info.platformName, content: '# ' + info.adaptedContent.title + '\n\n' + info.adaptedContent.content, type: 'text' });
           } else if (info.copyTarget === 'text' && info.adaptedContent.content) {
-            copyTexts.push({ platform: info.platformName, content: info.adaptedContent.content, type: 'text' });
+            copyTexts.push({ platform: info.platformName, content: info.adaptedContent.title + '\n\n' + info.adaptedContent.content, type: 'text' });
           }
         });
 
@@ -324,6 +329,7 @@
     if (state.selectedPlatforms.size === 0) { showToast('请先选择平台', 'error'); return; }
     var cd = getContentData();
     if (!cd.title || !cd.content) { showToast('请填写标题和正文', 'error'); return; }
+    if (checkLimitsBlock()) return;
     state.isPublishing = true;
     btnPublish.disabled = true;
 
@@ -418,6 +424,52 @@
     }).catch(function () {});
   }
 
+  // ============= 字数限制实时检测 =============
+  var limitToastTimer;
+  function checkLimits() {
+    if (state.selectedPlatforms.size === 0) return;
+    var pid = Array.from(state.selectedPlatforms)[0];
+    var platform = null;
+    for (var i = 0; i < state.platforms.length; i++) {
+      if (state.platforms[i].id === pid) { platform = state.platforms[i]; break; }
+    }
+    if (!platform) return;
+
+    var titleLen = titleInput.value.length;
+    var contentLen = contentInput.value.length;
+
+    clearTimeout(limitToastTimer);
+    if (titleLen > platform.maxTitleLength) {
+      limitToastTimer = setTimeout(function () {
+        showToast('⚠ 标题超出 ' + platform.name + ' 限制（' + platform.maxTitleLength + '字），当前 ' + titleLen + ' 字', 'error');
+      }, 500);
+    } else if (contentLen > platform.maxContentLength) {
+      limitToastTimer = setTimeout(function () {
+        showToast('⚠ 正文超出 ' + platform.name + ' 限制（' + platform.maxContentLength + '字），当前 ' + contentLen + ' 字', 'error');
+      }, 500);
+    }
+  }
+
+  function checkLimitsBlock() {
+    if (state.selectedPlatforms.size === 0) return false;
+    var pid = Array.from(state.selectedPlatforms)[0];
+    var platform = null;
+    for (var i = 0; i < state.platforms.length; i++) {
+      if (state.platforms[i].id === pid) { platform = state.platforms[i]; break; }
+    }
+    if (!platform) return false;
+
+    if (titleInput.value.length > platform.maxTitleLength) {
+      showToast('⚠ 标题超出 ' + platform.name + ' 限制（' + platform.maxTitleLength + '字），无法发布，请修改', 'error');
+      return true;
+    }
+    if (contentInput.value.length > platform.maxContentLength) {
+      showToast('⚠ 正文超出 ' + platform.name + ' 限制（' + platform.maxContentLength + '字），无法发布，请修改', 'error');
+      return true;
+    }
+    return false;
+  }
+
   // ============= Events =============
   function bindEvents() {
     btnPublish.addEventListener('click', function () {
@@ -465,11 +517,17 @@
       }).catch(function (err) { showToast('配置失败: ' + err.message, 'error'); });
     });
 
-    titleInput.addEventListener('input', function () { $('#title-count').textContent = titleInput.value.length; });
+    var limitToastTimer;
+
+    titleInput.addEventListener('input', function () {
+      $('#title-count').textContent = titleInput.value.length;
+      checkLimits();
+    });
     summaryInput.addEventListener('input', function () { $('#summary-count').textContent = summaryInput.value.length; });
     var previewTimer;
     contentInput.addEventListener('input', function () {
       $('#content-count').textContent = contentInput.value.length;
+      checkLimits();
       clearTimeout(previewTimer);
       previewTimer = setTimeout(function () {
         if (state.selectedPlatforms.size > 0) refreshPreviews();
